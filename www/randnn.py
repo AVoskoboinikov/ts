@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-fixtures_files = tf.train.string_input_producer(["fixtures.csv"])
+fixtures_files = tf.train.string_input_producer(["fixtures_1.csv"])
 reader = tf.TextLineReader()
 key, value = reader.read(fixtures_files)
 
@@ -16,8 +16,11 @@ with tf.Session() as sess:
   for i in range(10):
     # Retrieve a single instance:
     example, label = sess.run([features, col3])
-    print(example)
-    print(label)
+    print example
+    print label
+    print sess.run(reader.num_records_produced())
+
+    sess.run(reader.reset())
 
   coord.request_stop()
   coord.join(threads)
