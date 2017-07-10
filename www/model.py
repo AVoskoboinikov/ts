@@ -63,7 +63,7 @@ def model_nn(data):
 	return ol_value
 
 # define a way the nn trains
-epochs_count = 10
+epochs_count = 20
 iterations_count = 100000
 
 def train_nn(x):
