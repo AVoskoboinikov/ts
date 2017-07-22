@@ -3,14 +3,14 @@ import csv
 from tensorflow.python.ops import rnn, rnn_cell
 
 rnn_size = 10
-x = tf.placeholder(tf.float32, [10, 1])
+x = tf.placeholder(tf.float32, [None, 10, 1])
 y = tf.placeholder(tf.float32)
 
 # define a way the nn trains
-# batch_size = 10
-epochs_count = 100
-iterations_count = 1000
-validation_count = 20
+batch_size = 10
+epochs_count = 400
+iterations_count = 1000/batch_size
+validation_count = 20/batch_size
 
 def get_data_ref(batch_size=1):
 	columns_count = 11
@@ -34,50 +34,14 @@ def get_data_ref(batch_size=1):
 
 	return label_data, feature_data
 
-# def read_data(rows_count):
-# 	columns_count = 11
-
-# 	# prepare for fixture reading
-# 	fixtures_files = tf.train.string_input_producer(["fixtures_1.csv"])
-# 	reader = tf.TextLineReader()
-# 	key, value = reader.read(fixtures_files)
-
-# 	record_defaults = [[1.] for _ in range(columns_count)]
-# 	columns = tf.decode_csv(value, record_defaults=record_defaults)
-# 	label_data = tf.stack(columns[0:(columns_count-1)])
-# 	feature_data = tf.stack([columns[-1]])
-
-# 	labels = []
-# 	features = []
-
-# 	with tf.Session() as sess:
-# 		sess.run(tf.global_variables_initializer())
-
-# 		# Start populating the filename queue.
-# 		coord = tf.train.Coordinator()
-# 		threads = tf.train.start_queue_runners(coord=coord)
-
-# 		for _ in range(rows_count):
-
-# 			x1, x2 = sess.run([label_data, feature_data])
-
-# 			labels.append(x1)
-# 			features.append(x2)
-
-# 		coord.request_stop()
-# 		coord.join(threads)
-
-# 	sess.close()
-
-# 	return batched_label_data, batched_feature_data
-
-
 def rnn_model(data):
 	layer = {
 		'weights': tf.Variable(tf.random_uniform([rnn_size, 1], -0.4, 0.4)),
 		'biases': tf.Variable(tf.random_uniform([]))
 	}
 
+	data = tf.transpose(data, [1,0,2])
+	data = tf.reshape(data, [-1, 1])
 	data = tf.split(data, 10, 0)
 
 	lstm_cell = rnn_cell.LSTMCell(rnn_size, state_is_tuple=True, activation=tf.nn.relu)
@@ -89,11 +53,11 @@ def rnn_model(data):
 
 def rnn_train(x):
 	train_data_count = iterations_count
-	features, labels = get_data_ref(1)
+	features, labels = get_data_ref(batch_size)
 	
 	prediction = rnn_model(x)
 	cost = tf.reduce_mean(tf.square(prediction - y))
-	optimizer = tf.train.AdamOptimizer(0.0005).minimize(cost)
+	optimizer = tf.train.AdamOptimizer(0.00005).minimize(cost)
 	# lossLogFile = open('loss.csv', 'wb')
 
 	with tf.Session() as sess:
@@ -117,7 +81,7 @@ def rnn_train(x):
 					feature, label = sess.run([features, labels])
 
 					print "\n"
-					print "Input is:", feature, "Label is:", label
+					print "Label is:", label
 					print "Prediction is:", sess.run(prediction, {x:feature})
 					print "\n"
 
