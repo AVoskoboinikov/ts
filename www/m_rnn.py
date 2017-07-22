@@ -11,7 +11,7 @@ col1, col2, col3 = tf.decode_csv(value, record_defaults=record_defaults)
 input_data = tf.stack([[col1], [col2]])
 
 # prepare nn model params
-rnn_size = 32
+rnn_size = 8
 
 x = tf.placeholder(tf.float32, [2, 1])
 y = tf.placeholder(tf.float32)
@@ -33,8 +33,8 @@ def rnn_model(data):
 	return output
 
 # define a way the nn trains
-epochs_count = 2
-iterations_count = 100000
+epochs_count = 1
+iterations_count = 10000
 validation_count = 10
 
 def rnn_train(x):
