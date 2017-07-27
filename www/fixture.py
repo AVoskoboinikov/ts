@@ -8,9 +8,7 @@ def get_fixtures():
 	
 	seed = 0.001
 	seed_step = 0.0001
-	item_step = 0.000001
-
-	x = 'xxx'
+	item_step = 0.000003
 	
 	for _ in range(0, 1000):
 		fixtures.append([ np.float32(seed + item * item_step) for item in range(0, seq_count)])

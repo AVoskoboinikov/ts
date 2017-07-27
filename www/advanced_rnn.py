@@ -8,7 +8,7 @@ y = tf.placeholder(tf.float32)
 
 # define a way the nn trains
 batch_size = 10
-epochs_count = 400
+epochs_count = 1000
 iterations_count = 1000/batch_size
 validation_count = 20/batch_size
 
@@ -57,7 +57,7 @@ def rnn_train(x):
 	
 	prediction = rnn_model(x)
 	cost = tf.reduce_mean(tf.square(prediction - y))
-	optimizer = tf.train.AdamOptimizer(0.00005).minimize(cost)
+	optimizer = tf.train.AdamOptimizer(0.00001).minimize(cost)
 	# lossLogFile = open('loss.csv', 'wb')
 
 	with tf.Session() as sess:
