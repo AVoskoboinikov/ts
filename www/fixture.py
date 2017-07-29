@@ -1,8 +1,9 @@
 import csv
 import random
 import numpy as np
+import math
 
-def get_fixtures():
+def get_fixtures2():
 	fixtures = []
 	seq_count = 11
 	
@@ -15,6 +16,17 @@ def get_fixtures():
 		seed = seed + seed_step
 
 	random.shuffle(fixtures)
+	
+	return fixtures
+
+def get_fixtures():
+	fixtures = []
+	seq_count = 10000
+	
+	for angle in range(seq_count):
+	    y1 = math.sin(math.radians(angle))
+	    y2 = math.sin(math.radians(angle+1))
+	    fixtures.append([y1,y2])
 	
 	return fixtures
 
