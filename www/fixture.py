@@ -30,9 +30,25 @@ def get_fixtures():
 	
 	return fixtures
 
+def get_fixtures3():
+	fixtures = []
+	seq_count = 10000
+	
+	seed = 0.00001
+	y2 = seed
+
+	for i in range(seq_count):
+	    y1 = y2
+	    y2 = y2 + seed
+	    
+	    fixtures.append([y1,y2])
+	    
+	
+	return fixtures
+
 with open('fixtures_1.csv', 'wb') as csvfile:
     fixtureFile = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    fixtures = get_fixtures()
+    fixtures = get_fixtures3()
 
     for row in fixtures:
     	fixtureFile.writerow(row)

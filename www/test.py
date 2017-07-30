@@ -3,11 +3,11 @@ import csv
 from tensorflow.python.ops import rnn, rnn_cell
 
 x1 = tf.constant([
-	[[1],[1],[1]],
-	[[1],[1],[1]],
-	[[1],[1],[1]],
-	[[1],[1],[1]],
-	[[1],[1],[1]]
+	[1,1,1],
+	[1,1,1],
+	[1,1,1],
+	[1,1,1],
+	[1,1,1]
 ])
 x = tf.placeholder(tf.float32, [5, 3])
 # x2 = tf.Variable(tf.random_uniform([10, 1], -1, 1))
@@ -76,9 +76,9 @@ def run(data):
 
 		# print sess.run(length)
 
-		# p = sess.run([x], feed_dict={data: sess.run(x1)})
+		p = sess.run([x], feed_dict={data: sess.run(x1)})
 
-		# print p
+		print p
 		# x2s = tf.split(x2, 10, 0)
 		# print sess.run(x2)
 		# print

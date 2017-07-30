@@ -1,17 +1,15 @@
 import tensorflow as tf
 import csv
 from tensorflow.python.ops import rnn, rnn_cell
-import collections
 
 rnn_size = 11
-x = tf.placeholder(tf.float32, [None, 1])
+x = tf.placeholder(tf.float32, [None, 1, 1])
 y = tf.placeholder(tf.float32)
 
-batch_size = 50
+batch_size = 10
 epochs_count = 1000
 iterations_count = 10000/batch_size
 validation_count = 100/batch_size
-s = (tf.zeros([batch_size, rnn_size]), tf.zeros([batch_size, rnn_size]))
 
 def get_data_ref(batch_size=1):
 	columns_count = 2
@@ -23,7 +21,7 @@ def get_data_ref(batch_size=1):
 
 	record_defaults = [[1.] for _ in range(columns_count)]
 	columns = tf.decode_csv(value, record_defaults=record_defaults)
-	label_data = tf.stack([columns[i] for i in range(columns_count-1)])
+	label_data = tf.stack([[columns[i]] for i in range(columns_count-1)])
 	feature_data = tf.stack([columns[-1]])
 
 	if batch_size != -1:
@@ -35,7 +33,17 @@ def get_data_ref(batch_size=1):
 
 	return label_data, feature_data
 
-def rnn_model(data, state):
+def last_relevant(output, length):
+  batch_size = tf.shape(output)[0]
+  max_length = tf.shape(output)[1]
+  out_size = int(output.get_shape()[2])
+  index = tf.range(0, batch_size) * max_length + (length - 1)
+  flat = tf.reshape(output, [-1, out_size])
+  relevant = tf.gather(flat, index)
+  
+  return relevant
+
+def rnn_model(data):
 	feature_columns_count = 1
 
 	layer = {
@@ -45,16 +53,17 @@ def rnn_model(data, state):
 
 	length = [feature_columns_count for _ in range(batch_size)]
 	lstm_cell = rnn_cell.LSTMCell(rnn_size)
-	outputs, state = lstm_cell(data, state)
-	output = tf.matmul(outputs, layer['weights']) + layer['biases']
+	outputs, _ = rnn.dynamic_rnn(lstm_cell, data, dtype=tf.float32, sequence_length=length)
 
-	return output, state
+	output = tf.matmul(last_relevant(outputs, feature_columns_count), layer['weights']) + layer['biases']
+
+	return output
 
 def rnn_train(x):
 	train_data_count = iterations_count
 	features, labels = get_data_ref(batch_size)
 	
-	prediction, states = rnn_model(x, s)
+	prediction = rnn_model(x)
 	cost = tf.reduce_mean(tf.square(prediction - y))
 	optimizer = tf.train.AdamOptimizer(0.00005).minimize(cost)
 
@@ -63,15 +72,13 @@ def rnn_train(x):
 
 		coord = tf.train.Coordinator()
 		threads = tf.train.start_queue_runners(coord=coord)
-	
+
 		for epoch in range(epochs_count):
 			epoch_lost = 0
-	
-			state = sess.run((tf.zeros([batch_size, rnn_size]), tf.zeros([batch_size, rnn_size])))
 			
 			for i in range(0, (iterations_count - validation_count)):
 				feature, label = sess.run([features, labels])
-				state, _, loss = sess.run([states, optimizer, cost], feed_dict={x:feature, y:label, s:state})
+				_, loss = sess.run([optimizer, cost], feed_dict={x:feature, y:label})
 
 				epoch_lost += loss
 
@@ -79,11 +86,10 @@ def rnn_train(x):
 
 				for i in range((iterations_count - validation_count), iterations_count):
 					feature, label = sess.run([features, labels])
-					p, state = sess.run([prediction, states], {x:feature, s:state})
 
 					print "\n"
 					print "Label is:", label
-					print "Prediction is:", p
+					print "Prediction is:", sess.run(prediction, {x:feature})
 					print "\n"
 
 			print 'Epoch', epoch + 1, 'is done'
