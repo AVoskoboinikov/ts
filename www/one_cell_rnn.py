@@ -4,17 +4,17 @@ from tensorflow.python.ops import rnn, rnn_cell
 import collections
 
 rnn_size = 11
-x = tf.placeholder(tf.float32, [None, 1])
+x = tf.placeholder(tf.float32, [None, 3])
 y = tf.placeholder(tf.float32)
 
 batch_size = 50
 epochs_count = 1000
-iterations_count = 10000/batch_size
-validation_count = 100/batch_size
+iterations_count = int(10000/batch_size)
+validation_count = int(100/batch_size)
 s = (tf.zeros([batch_size, rnn_size]), tf.zeros([batch_size, rnn_size]))
 
 def get_data_ref(batch_size=1):
-	columns_count = 2
+	columns_count = 4
 
 	# prepare for fixture reading
 	fixtures_files = tf.train.string_input_producer(["fixtures_1.csv"])
@@ -35,8 +35,8 @@ def get_data_ref(batch_size=1):
 
 	return label_data, feature_data
 
-def rnn_model(data, state):
-	feature_columns_count = 1
+def rnn_model(data):
+	feature_columns_count = 3
 
 	layer = {
 		'weights': tf.Variable(tf.random_uniform([rnn_size, 1], -1, 1)),
@@ -45,16 +45,17 @@ def rnn_model(data, state):
 
 	length = [feature_columns_count for _ in range(batch_size)]
 	lstm_cell = rnn_cell.LSTMCell(rnn_size)
-	outputs, state = lstm_cell(data, state)
+	state = (tf.zeros([batch_size, rnn_size]), tf.zeros([batch_size, rnn_size]))
+	outputs, _ = lstm_cell(data, state)
 	output = tf.matmul(outputs, layer['weights']) + layer['biases']
 
-	return output, state
+	return output
 
 def rnn_train(x):
 	train_data_count = iterations_count
 	features, labels = get_data_ref(batch_size)
 	
-	prediction, states = rnn_model(x, s)
+	prediction = rnn_model(x)
 	cost = tf.reduce_mean(tf.square(prediction - y))
 	optimizer = tf.train.AdamOptimizer(0.00005).minimize(cost)
 
@@ -67,32 +68,32 @@ def rnn_train(x):
 		for epoch in range(epochs_count):
 			epoch_lost = 0
 	
-			state = sess.run((tf.zeros([batch_size, rnn_size]), tf.zeros([batch_size, rnn_size])))
+			# state = sess.run((tf.zeros([batch_size, rnn_size]), tf.zeros([batch_size, rnn_size])))
 			
 			for i in range(0, (iterations_count - validation_count)):
 				feature, label = sess.run([features, labels])
-				state, _, loss = sess.run([states, optimizer, cost], feed_dict={x:feature, y:label, s:state})
+				_, loss = sess.run([optimizer, cost], feed_dict={x:feature, y:label})
 
 				epoch_lost += loss
 
-			if (epoch + 1) % 10 == 0:
+			if (epoch + 1) % 50 == 0:
 
 				for i in range((iterations_count - validation_count), iterations_count):
 					feature, label = sess.run([features, labels])
-					p, state = sess.run([prediction, states], {x:feature, s:state})
+					p = sess.run([prediction], {x:feature})
 
-					print "\n"
-					print "Label is:", label
-					print "Prediction is:", p
-					print "\n"
+					print("\n")
+					print("Label is:", label)
+					print("Prediction is:", p)
+					print("\n")
 
-			print 'Epoch', epoch + 1, 'is done'
-			print 'Epoch lost is:', epoch_lost
-			print '\n\n\n'
+			print('Epoch', epoch + 1, 'is done')
+			print('Epoch lost is:', epoch_lost)
+			print('\n\n\n')
 
 		coord.request_stop()
 		coord.join(threads)
 
-		print 'Done!'
+		print('Done!')
 
 rnn_train(x)

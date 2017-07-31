@@ -2,6 +2,7 @@ import csv
 import random
 import numpy as np
 import math
+from array import array
 
 def get_fixtures2():
 	fixtures = []
@@ -46,9 +47,26 @@ def get_fixtures3():
 	
 	return fixtures
 
-with open('fixtures_1.csv', 'wb') as csvfile:
+def get_fixtures4():
+	fixtures = []
+	seq_count = 10000
+	
+	seed = 0.00001
+	y2 = seed
+
+	for i in range(seq_count):
+	    y1 = y2
+	    y2 = y1 + seed
+	    y3 = y2 + seed
+	    y4 = y3 + seed
+	    
+	    fixtures.append([y1, y2, y3, y4])
+	
+	return fixtures
+
+with open('fixtures_1.csv', 'w', newline='') as csvfile:
     fixtureFile = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    fixtures = get_fixtures3()
+    fixtures = get_fixtures4()
 
     for row in fixtures:
     	fixtureFile.writerow(row)

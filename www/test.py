@@ -65,7 +65,7 @@ def run(data):
 		# print sess.run(x1)
 		# print
 		# print sess.run(x1)
-		print sess.run(tf.shape(x1))
+		print(sess.run(tf.shape(x1)))
 		# print sess.run(tf.rank(x1))
 
 		# print "\n\n\n"
@@ -78,7 +78,7 @@ def run(data):
 
 		p = sess.run([x], feed_dict={data: sess.run(x1)})
 
-		print p
+		print(p)
 		# x2s = tf.split(x2, 10, 0)
 		# print sess.run(x2)
 		# print

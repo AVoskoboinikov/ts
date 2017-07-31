@@ -3,16 +3,16 @@ import csv
 from tensorflow.python.ops import rnn, rnn_cell
 
 rnn_size = 11
-x = tf.placeholder(tf.float32, [None, 1, 1])
+x = tf.placeholder(tf.float32, [None, 3, 1])
 y = tf.placeholder(tf.float32)
 
 batch_size = 10
 epochs_count = 1000
-iterations_count = 10000/batch_size
-validation_count = 100/batch_size
+iterations_count = int(10000/batch_size)
+validation_count = int(100/batch_size)
 
 def get_data_ref(batch_size=1):
-	columns_count = 2
+	columns_count = 4
 
 	# prepare for fixture reading
 	fixtures_files = tf.train.string_input_producer(["fixtures_1.csv"])
@@ -44,7 +44,7 @@ def last_relevant(output, length):
   return relevant
 
 def rnn_model(data):
-	feature_columns_count = 1
+	feature_columns_count = 3
 
 	layer = {
 		'weights': tf.Variable(tf.random_uniform([rnn_size, 1], -1, 1)),
@@ -87,18 +87,18 @@ def rnn_train(x):
 				for i in range((iterations_count - validation_count), iterations_count):
 					feature, label = sess.run([features, labels])
 
-					print "\n"
-					print "Label is:", label
-					print "Prediction is:", sess.run(prediction, {x:feature})
-					print "\n"
+					print("\n")
+					print("Label is:", label)
+					print("Prediction is:", sess.run(prediction, {x:feature}))
+					print("\n")
 
-			print 'Epoch', epoch + 1, 'is done'
-			print 'Epoch lost is:', epoch_lost
-			print '\n\n\n'
+			print('Epoch', epoch + 1, 'is done')
+			print('Epoch lost is:', epoch_lost)
+			print('\n\n\n')
 
 		coord.request_stop()
 		coord.join(threads)
 
-		print 'Done!'
+		print('Done!')
 
 rnn_train(x)
