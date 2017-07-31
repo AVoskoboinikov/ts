@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 #Input Params
 input_dim = 1
-lstm_size = 10
+lstm_size = 30
 input_size = 3
 
 #Random initial angles
@@ -36,6 +36,7 @@ def get_sample():
     angle2 %= 2*pi
     
     # return array([array([5 + 5*sin(angle1) + 10*cos(angle2), 7 + 7*sin(angle2) + 14*cos(angle1)])])
+    # return array([array([randint(1, 20) + randint(1, 20)*sin(angle1) + randint(1, 20)*cos(angle2)])])
     return array([array([5 + 5*sin(angle1) + 10*cos(angle2)])])
  
 sliding_window = []
@@ -123,7 +124,7 @@ error = tf.reduce_mean(tf.square(final_output - correct_output))
 
 ##The Optimizer
 #Adam works best
-train_step = tf.train.AdamOptimizer(0.00005).minimize(error)
+train_step = tf.train.AdamOptimizer(0.00001).minimize(error)
 
 ##Session
 sess = tf.Session()
@@ -139,7 +140,7 @@ network_output2 = []
 x_axis = []
  
  
-for i in range(300000):
+for i in range(600000):
     input_v, output_v = get_total_input_output()
     _, _, _, network_output, error_v = sess.run([lstm_update_op1,
                                         lstm_update_op2,
