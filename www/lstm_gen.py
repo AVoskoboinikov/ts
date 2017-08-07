@@ -4,10 +4,20 @@ from random import randint
 import tensorflow as tf
 from tensorflow.python.ops import rnn, rnn_cell
 import matplotlib.pyplot as plt
+import time
+
+fixture_file = 'alpari/test1.csv'
+fixture_data = []
+fixture_size = 23
+
+with open(fixture_file) as source:
+    [fixture_data.append(row.strip().split(',')) for row in source]
 
 # need a function to produce input data here 
-def get_total_input_output:
-    return 42
+def get_fixture_label_data(row_num):
+    row_num = (row_num % len(fixture_data)) - 1
+    
+    return [fixture_data[row_num][0:fixture_size]], [[fixture_data[row_num][-1]]]
 
 
 
@@ -18,8 +28,8 @@ def get_total_input_output:
 # ###############################################
 
 # global init params
-lstm_size = 10
-input_size = 3
+lstm_size = 50
+input_size = fixture_size
 
 # placeholder for input data
 input_layer = tf.placeholder(tf.float32, [1, input_size])
@@ -60,7 +70,7 @@ correct_output = tf.placeholder(tf.float32, [1, 1])
 error = tf.reduce_mean(tf.square(final_output - correct_output))
 
 # optimization for error
-optimize = tf.train.AdamOptimizer(0.00005).minimize(error)
+optimize = tf.train.AdamOptimizer(0.0000001).minimize(error)
 
 
 
@@ -70,7 +80,8 @@ optimize = tf.train.AdamOptimizer(0.00005).minimize(error)
 # Training
 # ########
 
-train_iterations_count = 300000
+train_iterations_count = 110000
+train_epoch_count = 1
 
 # initializr tensorflow session
 sess = tf.Session()
@@ -78,42 +89,48 @@ sess = tf.Session()
 # initialize variables
 sess.run(tf.global_variables_initializer())
 
-actual_output_collection = []
-network_output_collection = []
-x_axis = []
- 
-for i in range(train_iterations_count):
-    # here should be function to retreive train data
-    input_value, output_value = get_total_input_output()
+for epoch in range(train_epoch_count):
+    actual_output_collection = []
+    network_output_collection = []
+    x_axis = []
 
-    _, _, _, network_output, error_value = sess.run(
-        [update_lstm_c_state, update_lstm_h_state, optimize, final_output,  error],
-        feed_dict = {input_layer: input_value, correct_output: output_value}
-    )
-
-    # in case we need reset state we can run this
-    # this will reset both cell and hidden states per each 1100 iteration
-    # if i % 1100 == 0:
-        # sess.run([reset_lstm_update_op1, reset_lstm_update_op2])
-
-    # print current iteration number and error value
-    print(i, error_v, "\n\n")
+    # reset both cell and hidden states, so the test data will not be influenced with trained one
+    sess.run(reset_lstm_c_state)
+    sess.run(reset_lstm_h_state)
     
-    # save all outputs so we can plot them later on graph
-    actual_output_collection.append(output_value[0][0])
-    network_output_collection.append(network_output[0][0])
+    for i in range(train_iterations_count):
+        # here should be function to retreive train data
+        input_value, output_value = get_fixture_label_data((i+1))
 
-    # this will be x-axis in future graph
-    x_axis.append(i)
+        # print(input_value, output_value)
+        _, _, _, network_output, error_value = sess.run(
+            [update_lstm_c_state, update_lstm_h_state, optimize, final_output,  error],
+            feed_dict = {input_layer: input_value, correct_output: output_value}
+        )
 
-# add predicted outputs with red color and real otputs with blue color
-plt.plot(
-    x_axis, network_output_collection, 'r-', 
-    x_axis, actual_output_collection, 'b-'
-)
+        # in case we need reset state we can run this
+        # this will reset both cell and hidden states per each 1100 iteration
+        # if (i+1) % len(fixture_data) == 0:
+            # sess.run([reset_lstm_c_state, reset_lstm_h_state])
 
-# shows graph
-plt.show()
+        # print current iteration number and error value
+        # print('Epoch:',epoch, 'Iteration:', (i+1), 'Error:', error_value, "\n\n")
+        
+        # save all outputs so we can plot them later on graph
+        actual_output_collection.append(output_value[0][0])
+        network_output_collection.append(network_output[0][0])
+
+        # this will be x-axis in future graph
+        x_axis.append(i)
+
+# # add predicted outputs with red color and real otputs with blue color
+# plt.plot(
+#     x_axis, network_output_collection, 'r-', 
+#     x_axis, actual_output_collection, 'b-'
+# )
+
+# # shows graph
+# plt.show()
 
 
 
@@ -124,31 +141,31 @@ plt.show()
 # Testing
 # #######
 
-train_iterations_count = 1000
+test_iterations_count = 4000
 
 # this will move window with input data to the right, so the testing data will not follow the trained data
-for i in range(200):
+# for i in range(200):
     # here should be function to retreive test data
-    get_total_input_output()
+    # get_fixture_label_data()
  
-# reset both cell and hidden states, so the test data will not be influenced with trained one
-sess.run(reset_lstm_c_state)
-sess.run(reset_lstm_h_state)
+# # reset both cell and hidden states, so the test data will not be influenced with trained one
+# sess.run(reset_lstm_c_state)
+# sess.run(reset_lstm_h_state)
 
 actual_output_collection = []
 network_output_collection = []
 x_axis = [] 
  
-for i in range(train_iterations_count):
+for i in range(test_iterations_count):
     # here should be function to retreive test data
-    input_value, output_value = get_total_input_output()
+    input_value, output_value = get_fixture_label_data(train_iterations_count + i + 1)
 
     _, _, network_output = sess.run(
         [update_lstm_c_state, update_lstm_h_state, final_output],
         feed_dict = {input_layer: input_value, correct_output: output_value}
     )
  
-    actual_output_collection.append(output_v[0][0])
+    actual_output_collection.append(float(output_value[0][0]))
     network_output_collection.append(network_output[0][0])
     x_axis.append(i)
  
@@ -156,4 +173,9 @@ plt.plot(
     x_axis, network_output_collection, 'r-', 
     x_axis, actual_output_collection, 'b-'
 )
-plt.show()
+# plt.show()
+
+# save plot to file
+id = str(int(time.time()))
+plotFileName = id + '.png'
+plt.savefig('plots/' + plotFileName)
