@@ -27,7 +27,7 @@ def get_fixture_label_data(row_num):
 # Setting path to model that will be restored
 # ###########################################
 
-model_id_to_restore = '1502223003'
+model_id_to_restore = '1502306694'
 
 path_to_model = os.path.join(
 	os.path.dirname(os.path.abspath(__file__)), 
@@ -80,9 +80,15 @@ for i in range(test_data_size):
         [update_lstm_c_state, update_lstm_h_state, final_output],
         feed_dict = {input_data: input_value}
     )
- 
+ 	
+	# if i % 10 == 0:
+    # print('Actual: ', output_value[0][0], 'Predicted: ', network_output[0][0])
+
     actual_output_collection.append(float(output_value[0][0]))
     network_output_collection.append(network_output[0][0])
+
+    print('Delta:', network_output[0][0] - float(output_value[0][0]))
+
     x_axis.append(i)
  
 plt.plot(

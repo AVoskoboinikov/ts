@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.ops import rnn, rnn_cell
+from shutil import copyfile
 import matplotlib.pyplot as plt
 import time
 import os
@@ -7,7 +8,7 @@ import os
 # id for current model
 current_run_id = str(int(time.time()))
 
-fixture_file = 'alpari/test1.csv'
+fixture_file = 'alpari/test2.csv'
 fixture_data = []
 fixture_size = 23
 
@@ -62,7 +63,7 @@ output_W = tf.Variable(tf.random_uniform([lstm_size, 1], -1, 1), name="output_W"
 output_b = tf.Variable(tf.random_uniform([1], -1, 1), name="output_b")
 
 # compute final prediction for step
-final_output = tf.add(tf.matmul(lstm_output, output_W),output_b, name="final_output")
+final_output = tf.add(tf.matmul(lstm_output, output_W), output_b, name="final_output")
 
 # placeholder for correct output
 correct_output = tf.placeholder(tf.float32, [1, 1])
@@ -71,7 +72,7 @@ correct_output = tf.placeholder(tf.float32, [1, 1])
 error = tf.reduce_mean(tf.square(final_output - correct_output))
 
 # optimization for error
-optimize = tf.train.AdamOptimizer(0.0000001).minimize(error)
+optimize = tf.train.AdamOptimizer(0.00000001).minimize(error)
 
 
 
@@ -119,7 +120,7 @@ for epoch in range(train_epoch_count):
 
         # print current iteration number and error value
         # print('Epoch:',epoch, 'Iteration:', (i+1), 'Error:', error_value, "\n\n")
-        
+
         # save all outputs so we can plot them later on graph
         actual_output_collection.append(output_value[0][0])
         network_output_collection.append(network_output[0][0])
@@ -157,6 +158,9 @@ if not os.path.exists(model_dir):
 
 # saving current model to file
 saver.save(sess, os.path.join(model_dir, current_run_id))
+
+# copy this file to dir with current_run_id as name
+copyfile(os.path.abspath(__file__), os.path.join(model_dir, current_run_id + '.py'))
 
 
 
@@ -202,8 +206,9 @@ plt.plot(
     x_axis, network_output_collection, 'r-', 
     x_axis, actual_output_collection, 'b-'
 )
-plt.figtext(0.05, 0.9, str(error_value), color="black", weight="bold", size="large")
-plt.show()
+plt.figtext(0.05, 0.95, "Total error: " + str(error_value), color="black", weight=500, size="medium")
+plt.figtext(0.05, 0.9, "Mean error: " + str(error_value/test_iterations_count), color="black", weight=500, size="medium")
+# plt.show()
 
 # save plot to file
 plotFileName = current_run_id + '.png'
