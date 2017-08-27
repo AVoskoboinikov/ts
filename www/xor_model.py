@@ -23,6 +23,8 @@ with tf.name_scope("cost") as scope:
 with tf.name_scope("train") as scope:
 	train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
 
+correct_prediction = tf.equal(tf.argmax(y_,1), tf.argmax(Hypothesis,1))
+
 XOR_X = [[0,0],[0,1],[1,0],[1,1]]
 XOR_Y = [[0],[1],[1],[0]]
 
@@ -35,14 +37,14 @@ sess.run(init)
 
 t_start = time.clock()
 for i in range(10000):
-	sess.run(train_step, feed_dict={x_: XOR_X, y_: XOR_Y})
-	if i % 1000 == 0:
+	is_c = sess.run(correct_prediction, feed_dict={x_: XOR_X, y_: XOR_Y})
+	if i % 1 == 0:
 		print('Epoch ', i)
-		print('Hypothesis ', sess.run(Hypothesis, feed_dict={x_: XOR_X}))
+		print('Correct ', is_c)
 		# print('Theta1 ', sess.run(Theta1))
 		# print('Bias1 ', sess.run(Bias1))
 		# print('Theta2 ', sess.run(Theta2))
 		# print('Bias2 ', sess.run(Bias2))
-		print('cost ', sess.run(cost, feed_dict={x_: XOR_X, y_: XOR_Y}))
+		# print('cost ', sess.run(cost, feed_dict={x_: XOR_X, y_: XOR_Y}))
 t_end = time.clock()
 print('Elapsed time ', t_end - t_start)
