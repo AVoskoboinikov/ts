@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.ops import rnn, rnn_cell
 from shutil import copyfile
-import matplotlib.pyplot as plt
 import time
 import os
 import numpy as np
@@ -11,7 +10,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # id for current model
 current_run_id = str(int(time.time()))
 
-fixture_file = 'alpari/AUDUSD-NZDUSD-1M.csv'
+fixture_file = 'alpari/AUDUSD-NZDUSD-1M-last-year.csv'
 fixture_data = []
 fixture_size = 30
 fixture_elems = 2
@@ -72,10 +71,7 @@ output_W1 = tf.Variable(tf.random_uniform([lstm_size, classes_size], -1, 1), nam
 output_b1 = tf.Variable(tf.random_uniform([classes_size], -1, 1), name="output_b1")
 
 # compute output for first layer
-output1 = tf.add(tf.matmul(last_relevant_output, output_W1), output_b1, name="output1")
-
-# compute final prediction for step
-final_output = output1
+final_output = tf.add(tf.matmul(last_relevant_output, output_W1), output_b1, name="final_output")
 
 # placeholder for correct output
 correct_output = tf.placeholder(tf.float32, [1, classes_size])
@@ -96,7 +92,7 @@ optimize = tf.train.AdamOptimizer(0.00005).minimize(error)
 # Training
 # ########
 
-train_iterations_count = len(fixture_data) - 150000
+train_iterations_count = len(fixture_data) - 100000
 train_epoch_count = 1
 
 # initializr tensorflow session
@@ -120,21 +116,31 @@ for epoch in range(train_epoch_count):
             feed_dict = {input_data: input_value, correct_output: output_value}
         )
 
-        if (i+1) % 10000 == 0:
+        epoch_results.append(is_correct[0])
+
+        if (i+1) % 1000 == 0:
             # print current iteration number and error value
             print('Epoch:', epoch, 'Iteration:', (i+1))
-            print('Error:', error_value)
-            # print('Correct:', is_correct)
+            # print('Error:', error_value)
+            print('Current accuracy:', sess.run(tf.reduce_mean(tf.cast(epoch_results, tf.float32))))
             # print('Real:', output_value, 'Predicted:', network_output, "\n\n")
+
+        # if error_value < 0.1:
+        #     print('Epoch:', epoch, 'Iteration:', (i+1))
+        #     print('Error:', error_value)
+        #     print('Correct:', is_correct)
+        #     print('Real:', output_value, 'Predicted:', network_output, "\n\n")
         
         # save all outputs so we can calculate accuracy
-        epoch_results.append(is_correct[0])
+        
 
     train_accuracy = sess.run(tf.reduce_mean(tf.cast(epoch_results, tf.float32)))
 
     print("####################", "\n")
     print("Train accuracy is:", train_accuracy)
     print("####################", "\n\n\n")
+
+
 
 
 # ############
@@ -168,7 +174,7 @@ copyfile(os.path.abspath(__file__), os.path.join(model_dir, current_run_id + '.p
 # Testing
 # #######
 
-test_iterations_count = 150000
+test_iterations_count = 100000
 
 epoch_results = []
 
@@ -180,6 +186,9 @@ for i in range(test_iterations_count):
         [final_output, correct_prediction],
         feed_dict = {input_data: input_value, correct_output: output_value}
     )
+
+    if is_correct == True:
+        print("Prediction is:", network_output)
 
     epoch_results.append(is_correct[0])
     
