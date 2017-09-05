@@ -10,7 +10,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # id for current model
 current_run_id = str(int(time.time()))
 
-fixture_file = 'alpari/AUDUSD-NZDUSD-1M-last-year.csv'
+fixture_file = 'alpari/AUDUSD-NZDUSD-1M-3.csv'
 fixture_data = []
 fixture_size = 30
 fixture_elems = 2
@@ -82,7 +82,7 @@ error = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=final_outp
 
 # optimization for error
 # optimize = tf.train.AdamOptimizer(0.00000001).minimize(error)
-optimize = tf.train.AdamOptimizer(0.00005).minimize(error)
+optimize = tf.train.AdamOptimizer().minimize(error)
 
 
 
@@ -93,7 +93,7 @@ optimize = tf.train.AdamOptimizer(0.00005).minimize(error)
 # ########
 
 train_iterations_count = len(fixture_data) - 100000
-train_epoch_count = 1
+train_epoch_count = 5
 
 # initializr tensorflow session
 sess = tf.Session()
@@ -109,7 +109,7 @@ for epoch in range(train_epoch_count):
 
     for i in range(train_iterations_count):
         # here should be function to retreive train data
-        input_value, output_value = get_fixture_label_data((i+1))
+        input_value, output_value = get_fixture_label_data(i)
 
         network_output, error_value, is_correct, _ = sess.run(
             [final_output, error, correct_prediction, optimize],
@@ -118,8 +118,7 @@ for epoch in range(train_epoch_count):
 
         epoch_results.append(is_correct[0])
 
-        if (i+1) % 1000 == 0:
-            # print current iteration number and error value
+        if (i+1) % 100000 == 0:
             print('Epoch:', epoch, 'Iteration:', (i+1))
             # print('Error:', error_value)
             print('Current accuracy:', sess.run(tf.reduce_mean(tf.cast(epoch_results, tf.float32))))
@@ -187,8 +186,8 @@ for i in range(test_iterations_count):
         feed_dict = {input_data: input_value, correct_output: output_value}
     )
 
-    if is_correct == True:
-        print("Prediction is:", network_output)
+    # if is_correct == True:
+        # print("Prediction is:", network_output)
 
     epoch_results.append(is_correct[0])
     

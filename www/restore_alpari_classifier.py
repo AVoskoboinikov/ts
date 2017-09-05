@@ -8,7 +8,7 @@ from random import shuffle
 # Reading test data
 # #################
 
-fixture_file = 'alpari/AUDUSD-NZDUSD-1M-last-year.csv'
+fixture_file = 'alpari/AUDUSD-NZDUSD-1M.csv'
 fixture_data = []
 fixture_size = 30
 fixture_elems = 2
@@ -36,7 +36,7 @@ def get_fixture_label_data(row_num):
 # Setting path to model that will be restored
 # ###########################################
 
-model_id_to_restore = '1504006754'
+model_id_to_restore = '1504123313'
 
 path_to_model = os.path.join(
 	os.path.dirname(os.path.abspath(__file__)), 
@@ -76,8 +76,8 @@ correct_prediction = tf.equal(tf.argmax(correct_output, 1), tf.argmax(final_outp
 # Testing restored model
 # ######################
 
-train_iterations_count = len(fixture_data) - 100000
-test_iterations_count = 100000
+train_iterations_count = len(fixture_data) - 40000
+test_iterations_count = 40000
 
 network_results = []
 
