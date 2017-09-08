@@ -6,8 +6,8 @@ from advisers import alwaysFalse
 
 # audusdFile = 'AUDUSD1M - last year.csv'
 # audusdFile = 'AUDUSD1M.csv'
-# audusdFile = 'NZDUSD1M - last year.csv'
-audusdFile = 'NZDUSD1M.csv'
+audusdFile = 'NZDUSD1M - last year.csv'
+# audusdFile = 'NZDUSD1M.csv'
 
 def drawPlot(index, orderTick, ticks, isPositive):
 	y_axis = [float(tick) for tick in ticks]
@@ -42,7 +42,7 @@ totalLossBiggerThanTotalProfit = 0
 
 for tick in range(window, len(openAudUsd)):
 	if isOrderPlaced == False:
-		history = openAudUsd[(tick-window) : tick]
+		history = openAudUsd[(tick-window) : (tick+1)]
 
 		if adviserThreeSteps(history) == True:
 			isOrderPlaced = True
@@ -59,12 +59,12 @@ for tick in range(window, len(openAudUsd)):
 			if totalLoss > totalProfit:
 				totalLossBiggerThanTotalProfit += 1
 
-			# drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-window) : tick], False)
+			# drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-2*window) : (tick + 1)], False)
 
 		if tickDiff > 0 and abs(tickDiff) >= stopProfit:
 			isOrderPlaced = False
 			totalProfit += abs(tickDiff)
-			# drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-window) : tick], True)
+			# drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-2*window) : (tick + 1)], True)
 
 print('Total profit:', totalProfit)
 print('Total loss:', totalLoss)

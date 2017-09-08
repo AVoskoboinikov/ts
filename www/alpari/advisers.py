@@ -9,9 +9,10 @@ def alwaysFalse(historyData):
 
 def adviserThreeSteps(historyData):
 	ok = False
-	
+	unicornWindow = 10
+
 	# find bottom points where graph changes direction
-	up, down = findUnicorns(historyData[-10:])
+	up, down = findUnicorns(historyData[-unicornWindow:])
 	
 	# check if previous points are like steps
 	if down == sorted(down) and len(down) >= 3:
@@ -43,7 +44,7 @@ def adviserThreeSteps(historyData):
 				ok = False
 
 		if ok:
-			up, down = findUnicorns(historyData[-10:])
+			up, down = findUnicorns(historyData[-unicornWindow:])
 			sortedUp = sorted(up)
 			sortedDown = sorted(down)
 
