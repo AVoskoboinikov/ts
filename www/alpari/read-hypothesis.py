@@ -1,87 +1,147 @@
 import csv
 import pandas as pd
+import matplotlib.pyplot as plt
+
 from find_unicorns import findUnicorns
 from get_unicorn_index import getUnicornIndex
+from trend import trendEMA, isTrendMovingUp, isTrendMovingDown
+from volatility import getVolatility, getUpVolatility, getDownVolatility
 
-audusdFile = 'AUDUSD1M - last year.csv'
-fileToWrite = 'AUDUSD-hypothesis.csv'
+def drawPlot(index, showLag, checkedWindow, ticks, additionalData):
+	y_axis = [float(tick) for tick in ticks]
+	x_axis = [i for i in range(1, len(y_axis) + 1)]
 
-audusd = pd.read_csv(audusdFile, usecols=['Date', 'Time', 'Open'])
+	fig = plt.figure()
+	fig.set_size_inches(15,8)
+
+	plt.plot(x_axis, y_axis, 'g-')
+	plt.axvline(showLag+checkedWindow)
+
+	plotFileName = str(index) + '.png'
+
+	# additionalData['trend']
+	trendY_axis = [float(tick) for tick in additionalData['trend']]
+	trendX_axis = [i for i in range(showLag+1, len(additionalData['trend']) + showLag+1)]
+	plt.plot(trendX_axis, trendY_axis, 'r-')
+
+	# additionalData['totalTrend']
+	trendY_axis = [float(tick) for tick in additionalData['totalTrend']]
+	trendX_axis = [i for i in range(100, len(additionalData['totalTrend']) + 100)]
+	plt.plot(trendX_axis, trendY_axis, 'b-')
+
+	# additionalData['volatility'] and additionalData['maxVolatility']
+	plt.figtext(0.05, 0.95, "V: " + str(format(additionalData['volatility'], 'f')), color="black", weight=500, size="medium")
+	plt.figtext(0.05, 0.9, "Max V: " + str(format(additionalData['maxVolatility'], 'f')), color="black", weight=500, size="medium")
+
+	# additionalData['upVolatility'] and additionalData['maxUpVolatility']
+	plt.figtext(0.2, 0.95, "Vup: " + str(format(additionalData['upVolatility'], 'f')), color="black", weight=500, size="medium")
+	plt.figtext(0.2, 0.9, "Max Vup: " + str(format(additionalData['maxUpVolatility'], 'f')), color="black", weight=500, size="medium")
+
+	# additionalData['downVolatility'] and additionalData['maxDownVolatility']
+	plt.figtext(0.35, 0.95, "Vdn: " + str(format(additionalData['downVolatility'], 'f')), color="black", weight=500, size="medium")
+	plt.figtext(0.35, 0.9, "Max Vdn: " + str(format(additionalData['maxDownVolatility'], 'f')), color="black", weight=500, size="medium")
+
+	# additionalData['upVolatility']/additionalData['downVolatility'] and additionalData['maxUpVolatility']/additionalData['maxDownVolatility']
+	plt.figtext(0.5, 0.95, "Vup/Vdn: " + str(format(additionalData['upVolatility']/additionalData['downVolatility'], 'f')), color="black", weight=500, size="medium")
+	plt.figtext(0.5, 0.9, "Max Vup/Max Vdn: " + str(format(additionalData['maxUpVolatility']/additionalData['maxDownVolatility'], 'f')), color="black", weight=500, size="medium")
+
+	# additionalData['totalUp'] and additionalData['totalDown']
+	plt.figtext(0.65, 0.95, "Total Up: " + str(additionalData['totalUp']), color="black", weight=500, size="medium")
+	plt.figtext(0.65, 0.9, "Total Down: " + str(additionalData['totalDown']), color="black", weight=500, size="medium")		
+
+	# additionalData['totalUp']/additionalData['totalDown']
+	plt.figtext(0.8, 0.95, "Total Up / Total Down: " + str(format(additionalData['totalUp']/additionalData['totalDown'], 'f')), color="black", weight=500, size="medium")
+
+	# plt.show()
+
+	plt.savefig('../plots/positive/' + plotFileName)
+
+	plt.clf()
+	plt.close(fig)
+
+# fileToRead = 'AUDUSD1M - last year.csv'
+# fileToRead = 'AUDUSD1M.csv'
+fileToRead = 'NZDUSD1M - last year.csv'
+# fileToRead = 'NZDUSD1M.csv'
+
+audusd = pd.read_csv(fileToRead, usecols=['Date', 'Time', 'Open'])
 openAudUsd = audusd['Open'].values
 
 del audusd
 
-fixtureSize = len(openAudUsd)
-howMany = 0
-fixtures = []
+windowToCheck = 75
+showLag = 50
+ticksStep = 10
 
-for startFrom in range(50, fixtureSize - 50):
-	sample = []
+beforeLag = 8*showLag
+afterLag = 4*showLag
+
+
+for tick in range(windowToCheck + beforeLag, len(openAudUsd), ticksStep):
 	
+	sampleTicks = openAudUsd[tick-windowToCheck : tick]
+	totalPrevTicks = openAudUsd[tick-windowToCheck-6*showLag : tick-windowToCheck]
 
-	# check w-shape + 3 steps
+	isOK = False
 
-	# x1 = openAudUsd[startFrom]
-	# x2 = openAudUsd[startFrom + 1]
-	# x3 = openAudUsd[startFrom + 2]
-	# x4 = openAudUsd[startFrom + 3]
-	# x5 = openAudUsd[startFrom + 4]
-	# x6 = openAudUsd[startFrom + 5]
-	# x7 = openAudUsd[startFrom + 6]
-	# x8 = openAudUsd[startFrom + 7]
+	emaTrend = trendEMA(sampleTicks, 5, 2)
+	trendUp = isTrendMovingUp(emaTrend, 10)
 
-	# if (x2 < x1):
-	# 	if (x3 < x1 and x3 > x2 and x4 < x3 and abs(x3 - x2) >= 0.0001 and abs(x4 - x3) >= 0.0001):
-	# 		if abs(x4 - x2) < 0.0001:
-	# 			if (x5 > x3):
-	# 				up, down = findUnicorns(openAudUsd[startFrom + 4 : startFrom + 11])
-					
-	# 				if down == sorted(down) and len(down) >= 3 and down[0] > x4 and abs(down[0] - x4) > 0.0001:
-	# 					sample = openAudUsd[ (startFrom - 30) : (startFrom + 30) ]
-	# 					fixtures.append(sample)
+	emaTotalTrend = trendEMA(totalPrevTicks, 15, 0.1) # 25, 0.2
+	totalTrendDown = isTrendMovingDown(emaTotalTrend, 25) # 35
 
-	up, down = findUnicorns(openAudUsd[startFrom: startFrom + 10])
-	
-	if down == sorted(down) and len(down) >= 3:
-		ok = True
-		
-		for i in range(1, len(down)):
-			if abs(down[i] - down[i-1]) <= 0:
-				ok = False
-		
-		if ok:
-			up, down = findUnicorns(openAudUsd[startFrom - 20: startFrom])
-			
-			if down == sorted(down, reverse=True):
-				ok = False
+	sampleVolatility, sampleMaxVolatility = getVolatility(sampleTicks)
+	sampleUpVolatility, sampleUpMaxVolatility = getUpVolatility(sampleTicks)
+	sampleDownVolatility, sampleDownMaxVolatility = getDownVolatility(sampleTicks)
 
-		if ok:
-			up, down = getUnicornIndex(openAudUsd[startFrom - 20: startFrom])
+	totalUp, totalDown = getUnicornIndex(sampleTicks)
+	totalUp = round(totalUp, 4)
+	totalDown = round(totalDown, 4)
 
-			if down > up or abs(up - down) < 0.0005:
-				ok = False
+	if trendUp and totalTrendDown:
+		isOK = True
 
-		if ok:
-			up, down = findUnicorns(openAudUsd[startFrom: startFrom + 10])
-			sortedUp = sorted(up)
-			sortedDown = sorted(down)
+	# conditions
+	# if first point of emaTotalTrend < lastPoitn of emaTrend => left OK
+	# if first point of emaTotalTrend > lastPoitn of emaTrend => Not OK
+	# if first point of emaTotalTrend > lastPoitn of emaTrend and end of the emaTotalTrend is pierced by graph enough => left OK
 
-			x1 = sortedDown[0]
-			x2 = sortedUp[-1]
+	# maybe should be applied # magick numbers
+	# if sampleMaxVolatility > 0.001:
+	# 	isOK = False
 
-			if abs(x2 - x1) >= 0.0005:
-				ok = False
+	# maybe should be applied # magick numbers
+	# if sampleMaxVolatility >= 0.0008:
+	# 	isOK = False	
 
-		if ok:
-			sample = openAudUsd[ (startFrom - 50) : (startFrom + 50) ]
-			fixtures.append(sample)
-	
-	if (len(fixtures) >= 300):
-		break;
+	# maybe should be applied # magick numbers
+	# if totalUp >= 0.005:
+		# isOK = False
 
-# print(howMany)
-# print(len(fixtures))
+	# maybe should be applied # magick numbers
+	# if sampleUpVolatility/sampleDownVolatility > 1.8:
+	# 	isOK = False
 
-with open(fileToWrite, 'w', newline='') as csvfile:
-	destination = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-	destination.writerows(fixtures)
+	# maybe should be applied # magick numbers
+	# if sampleMaxVolatility/sampleDownMaxVolatility > 2 and sampleUpVolatility/sampleDownVolatility < 1.2 and totalUp/totalDown >= 2:
+	# 	isOK = False
+
+	# maybe should be applied # magick numbers
+	# if totalUp/totalDown >= 2.3 and totalUp >= 0.003:
+	# 	isOK = False
+
+	if isOK:
+		ticksToDraw = openAudUsd[tick-windowToCheck-beforeLag : tick+afterLag]
+		dataToPass = {
+			'trend': emaTrend,
+			'totalTrend': emaTotalTrend,
+			'volatility': sampleVolatility,
+			'maxVolatility': sampleMaxVolatility,
+			'upVolatility': sampleUpVolatility,
+			'maxUpVolatility': sampleUpMaxVolatility,
+			'downVolatility': sampleDownVolatility,
+			'maxDownVolatility': sampleDownMaxVolatility,
+			'totalUp': totalUp,
+			'totalDown': totalDown,
+		}
+		drawPlot(tick, beforeLag, windowToCheck, ticksToDraw, dataToPass)

@@ -13,6 +13,8 @@ def drawPlot(index, orderTick, ticks, isPositive):
 	y_axis = [float(tick) for tick in ticks]
 	x_axis = [i for i in range(1, len(y_axis) + 1)]
 
+	plt.figure().set_size_inches(12,8)
+
 	plt.plot(x_axis, y_axis, 'g-')
 	plt.axvline(len(ticks) - orderTick)
 
@@ -59,12 +61,12 @@ for tick in range(window, len(openAudUsd)):
 			if totalLoss > totalProfit:
 				totalLossBiggerThanTotalProfit += 1
 
-			# drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-2*window) : (tick + 1)], False)
+			drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-2*window) : (tick + 1)], False)
 
 		if tickDiff > 0 and abs(tickDiff) >= stopProfit:
 			isOrderPlaced = False
 			totalProfit += abs(tickDiff)
-			# drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-2*window) : (tick + 1)], True)
+			drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-2*window) : (tick + 1)], True)
 
 print('Total profit:', totalProfit)
 print('Total loss:', totalLoss)
