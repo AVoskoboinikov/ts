@@ -1,5 +1,9 @@
 from find_unicorns import findUnicorns
 from get_unicorn_index import getUnicornIndex
+from trend import trendEMA, isTrendMovingUp, isTrendMovingDown
+from volatility import getVolatility, getUpVolatility, getDownVolatility
+from helpers import getTrendGraphPierceIndex, getTrendGraphPierceWeightedIndex, getTrendGraphUnPierceWeightedIndex
+
 
 def alwaysTrue(historyData):
 	return True
@@ -57,4 +61,59 @@ def adviserThreeSteps(historyData):
 					ok = False
 
 	return ok
+
+def adviserTrendUp(historyData):
+	windowToCheck = 150
+	totalWindowToCheck = 300
+
+	sampleTicks = historyData[-windowToCheck:]
+	totalPrevTicks = historyData[-windowToCheck-totalWindowToCheck : -windowToCheck]
+
+	isOK = False
+
+	emaTrend = trendEMA(sampleTicks, 5, 0.2)
+	trendUp = isTrendMovingUp(emaTrend, 10)
+
+	emaTotalTrend = trendEMA(totalPrevTicks, 25, 0.2) # 25, 0.2
+	totalTrendDown = isTrendMovingDown(emaTotalTrend, 35) # 35
+	totalTrendUp = isTrendMovingUp(emaTotalTrend, 35)
+
+	# sampleVolatility, sampleMaxVolatility = getVolatility(sampleTicks)
+	sampleUpVolatility, sampleUpMaxVolatility = getUpVolatility(sampleTicks)
+	# sampleDownVolatility, sampleDownMaxVolatility = getDownVolatility(sampleTicks)
+
+	# totalUp, totalDown = getUnicornIndex(sampleTicks)
+	# totalUp = round(totalUp, 4)
+	# totalDown = round(totalDown, 4)
+
+	# piercedUpIndex = getTrendGraphPierceWeightedIndex(emaTotalTrend, totalPrevTicks)
+	# piercedDownIndex = getTrendGraphUnPierceWeightedIndex(emaTotalTrend, totalPrevTicks)
+
+	if trendUp:
+		isOK = True
+
+	if isOK:
+		isOK = False
+
+		subTrendWindow = 75
+		subTrendTicks = historyData[-subTrendWindow:]
+		emaSubTrend = trendEMA(subTrendTicks, 4, 0.4)
+		subTrendUp = isTrendMovingUp(emaSubTrend, 10)
+
+		if subTrendUp:
+			isOK = True
+
+	if isOK and totalTrendDown:
+		isOK = False
+
+		if min(emaTotalTrend) > max(emaTrend):
+			isOK = True
+
+	if isOK:
+		isOK = False
+
+		if sampleUpVolatility < 0.00015:
+			isOK = True
+
+	return isOK
 	
