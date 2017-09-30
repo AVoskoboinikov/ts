@@ -1,19 +1,20 @@
 # import pandas as pd
 # import matplotlib.pyplot as plt
 
-def getVolatility(ticks):
+def getVolatility(ticks, period):
 	volatilitySeries = []
 
-	for i in range(1, len(ticks)):
-		volatilitySeries.append(abs(ticks[i] - ticks[i-1]))
+	for i in range(period, len(ticks)):
+		volatilitySeries.append(abs(ticks[i] - ticks[i-period]))
 
 	volatilitySeries = sorted(volatilitySeries)
-	shortedSeries = volatilitySeries[10:]
 
+	maxVolatility = volatilitySeries[-1]
+	
+	shortedSeries = volatilitySeries[:-1]
 	volatility = sum(shortedSeries)/len(shortedSeries)
-	maxVolatility = max(shortedSeries)
 
-	return volatility, maxVolatility
+	return volatility, maxVolatility, volatilitySeries
 
 def getUpVolatility(ticks):
 	volatilitySeries = []

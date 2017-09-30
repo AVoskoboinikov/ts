@@ -31,3 +31,13 @@ def getTrendGraphUnPierceWeightedIndex(trendTicks, graphTicks):
 			index += weight * abs(graphTicks[i] - trendTicks[i])
 
 	return index
+
+def linesNotCross(line1, line2):
+	for i in range(len(line1)):
+		x1 = line1[i]
+		x2 = line2[i]
+
+		if x1 < x2 and abs(x2 - x1) >= 0.00005:
+			return False
+
+	return True
