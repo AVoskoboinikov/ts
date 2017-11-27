@@ -1,0 +1,249 @@
+//--------------------------------------------------------------------
+//
+// Robot v0.0.1
+//
+//--------------------------------------------------------------------
+
+//input int period = 3;
+
+//input double bP = 0.0010;
+//input double bQ = 0.0020;
+
+//input double sP = 0.0010;
+//input double sQ = 0.0020;
+
+//double lotSize = 0.1;
+
+datetime currentBarStartTime;
+int lastTicket;
+double takeProfit = 0.0002;
+double stopLoss = 0.0003;
+bool modified = false;
+
+double absoluteTakeProfit, absoluteStopLoss;
+
+//--------------------------------------------------------------------
+
+int start()
+{   
+   if (currentBarStartTime != Time[0])
+    {
+      
+      if(OrdersTotal() == 0)
+       {
+         OrderSelect(lastTicket, SELECT_BY_TICKET);
+         datetime orderCloseTime = OrderCloseTime();
+         datetime currentTime = TimeCurrent();
+         datetime timeDiff = (currentTime-orderCloseTime)/60;
+         
+         if(timeDiff > 10)
+          {
+            openOrder();
+          }
+       }
+       
+      if(OrdersTotal() == 1)
+       {
+         modifyOrder();
+       }
+
+      currentBarStartTime = Time[0];
+    }
+}
+
+void openOrder()
+{
+   string response;
+   double lotSize = 5;
+   double minstoplevel=MarketInfo("AUDUSD",MODE_STOPLEVEL);
+   double stoploss, takeprofit;
+   
+   response = makeRequest();
+   
+   if(response == NULL) 
+    {
+      Print("Wrong response");
+    }
+    
+   
+   // Sell
+   if(response == "-1")
+    {
+      stoploss=NormalizeDouble(Ask+stopLoss+minstoplevel*Point,Digits);
+      takeprofit=NormalizeDouble(Bid-takeProfit-minstoplevel*Point,Digits);
+   
+      lastTicket = OrderSend("AUDUSD", OP_SELL, lotSize, Bid, 0, stoploss, takeprofit);
+    }
+   
+   // Buy
+   if(response == "1")
+    {
+      stoploss=NormalizeDouble(Bid-stopLoss-minstoplevel*Point,Digits);
+      takeprofit=NormalizeDouble(Ask+takeProfit+minstoplevel*Point,Digits);
+      
+      lastTicket = OrderSend("AUDUSD", OP_BUY, lotSize, Ask, 0, stoploss, takeprofit);
+    }
+   
+   OrderSelect(lastTicket, SELECT_BY_TICKET);
+   absoluteTakeProfit = OrderTakeProfit();
+   absoluteStopLoss = OrderStopLoss();
+    
+   if(lastTicket < 0)
+    {
+     Print("OrderSend завершилась с ошибкой #",GetLastError());
+    }
+}
+
+void closeOrder()
+{
+   double diff;
+   
+   OrderSelect(lastTicket, SELECT_BY_TICKET);
+   
+   diff = iOpen("AUDUSD", PERIOD_M1, 0) - OrderOpenPrice();
+   
+   if(OrderType() == OP_SELL && diff <= -1*takeProfit)
+    {
+      OrderClose(OrderTicket(), OrderLots(), Ask, 0);  
+    }
+   
+   if(OrderType() == OP_BUY && diff >= takeProfit)
+    {
+      OrderClose(OrderTicket(), OrderLots(), Bid, 0);  
+    }
+}
+
+void modifyOrder()
+{
+   double diff;
+   double oldTp, oldSl, newTp, newSl;
+   double inc = 0.00001;
+   
+   OrderSelect(lastTicket, SELECT_BY_TICKET);
+   
+   diff = iOpen("AUDUSD", PERIOD_M1, 0) - OrderOpenPrice();
+   Print("Diff: " + diff);
+      
+   if(OrderType() == OP_SELL)
+    {
+      oldTp = absoluteTakeProfit;
+      oldSl = absoluteStopLoss;
+      
+      if(diff >= 15*inc)
+       {
+         newTp = oldTp + 10*inc;
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+       }
+      
+      if(diff >= 20*inc)
+       {
+         newTp = oldTp + 10*inc;
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+       }
+    }
+ 
+    if(OrderType() == OP_BUY)
+    {
+      oldTp = absoluteTakeProfit;
+      oldSl = absoluteStopLoss;
+      
+      if(diff <= -15*inc)
+       {
+         newTp = oldTp - 10*inc;
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+       }
+      
+      if(diff <= -20*inc)
+       {
+         newTp = oldTp - 10*inc;
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+       }
+    }
+}
+
+string makeRequest()
+{
+   string cookie=NULL,headers;
+   char post[],result[];
+   int responseCode;
+   string url="http://alpari.api/predict", request, response, audUsd, nzdUsd, usdZar, eurNzd, json;
+   int timeout=5000;
+   
+   ResetLastError();
+   
+   audUsd = "\"" + iOpen("AUDUSD", PERIOD_M1, 0) + "\"";
+   nzdUsd = "\"" + iOpen("NZDUSD", PERIOD_M1, 0) + "\"";
+   usdZar = "\"" + iOpen("USDZAR", PERIOD_M1, 0) + "\"";
+   eurNzd = "\"" + iOpen("EURNZD", PERIOD_M1, 0) + "\"";
+      
+   int i;
+   for(i=1;i<30;i++)
+    {
+     audUsd = audUsd + "," + "\"" + iOpen("AUDUSD", PERIOD_M1, i) + "\"";
+     nzdUsd = nzdUsd + "," + "\"" + iOpen("NZDUSD", PERIOD_M1, i) + "\"";
+     usdZar = usdZar + "," + "\"" + iOpen("USDZAR", PERIOD_M1, i) + "\"";
+     eurNzd = eurNzd + "," + "\"" + iOpen("EURNZD", PERIOD_M1, i) + "\"";
+    }
+   
+   json = "{" + "\"audusd\":" + "[" + audUsd + "]" + "," + "\"nzdusd\":" + "[" + nzdUsd + "]" + "," + "\"usdzar\":" + "[" + usdZar + "]" + "," + "\"eurnzd\":" + "[" + eurNzd + "]" + "}";
+   
+   headers = "Accept: application/json, text/plain, */*\r\n";
+   headers += "Content-Type: application/json;charset=utf-8\r\n\r\n";
+   request = json;
+   
+   StringToCharArray(request, post);
+   ArrayResize(post, ArraySize(post) - 1);
+   
+   responseCode = WebRequest("POST", url, headers, 0, post, result, headers);
+   response = CharArrayToString(result);
+   
+   //Print(responseCode + " : " + response);
+   
+   if(responseCode==-1)
+     {
+      Print("Ошибка в WebRequest. Код ошибки  =",GetLastError());
+      //--- возможно, URL отсутствует в списке, выводим сообщение о необходимости его добавления
+      Print("Необходимо добавить адрес '"+url+"' в список разрешенных URL во вкладке 'Советники'");
+      
+      return NULL;
+     }
+   
+   return response;
+}
+
+/*
+
+if (currentBarStartTime != Time[0]) {
+      double emaVCurrent = iMA(NULL, 0, 35, 0, MODE_EMA, PRICE_LOW, 0);
+      double emaVPeriod = iMA(NULL, 0, 35, 0, MODE_EMA, PRICE_LOW, period);
+      
+      if (OrdersTotal() == 0) {
+         if (emaVCurrent > emaVPeriod && emaVCurrent - emaVPeriod >= bP) {
+            OrderSend(Symbol(), OP_BUY, lotSize, Ask, 0, 0, 0);        
+            //Print(DoubleToString(Close[1], Digits()), " - ", DoubleToString(Close[period], Digits()), " = ", Close[1] - Close[period]);
+         }
+
+         if (emaVCurrent < emaVPeriod && emaVPeriod - emaVCurrent >= sP) {
+            OrderSend(Symbol(), OP_SELL, lotSize, Bid, 0, 0, 0);
+            //Print(DoubleToString(Close[period], Digits()), " - ", DoubleToString(Close[1], Digits()), " = ", Close[period] - Close[1]);
+         }
+      } else {
+         OrderSelect(0, SELECT_BY_POS);
+
+         if (Close[0] > Close[period] && Close[0] - Close[period] >= sQ) {
+            if (OrderType() == OP_SELL) {
+               OrderClose(OrderTicket(), OrderLots(), Ask, 0);
+            }
+         }
+
+         if (Close[0] < Close[period] && Close[period] - Close[0] >= bQ) {
+            if (OrderType() == OP_BUY) {
+               OrderClose(OrderTicket(), OrderLots(), Bid, 0);
+            }
+         }
+      }
+
+      currentBarStartTime = Time[0];
+   }
+
+*/

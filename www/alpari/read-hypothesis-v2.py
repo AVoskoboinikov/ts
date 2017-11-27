@@ -129,11 +129,11 @@ def checkIfStartToFall(ticks):
 	return False
 
 def getAudAndNzdTicks():
-	fileToReadAUD = 'AUDUSD1M - last year.csv'
-	# fileToRead = 'AUDUSD1M.csv'
+	# fileToReadAUD = 'AUDUSD1M - last year.csv'
+	fileToRead = 'AUDUSD1M.csv'
 	
-	fileToReadNZD = 'NZDUSD1M - last year.csv'
-	# fileToRead = 'NZDUSD1M.csv'
+	# fileToReadNZD = 'NZDUSD1M - last year.csv'
+	fileToRead = 'NZDUSD1M.csv'
 
 	audusd = pd.read_csv(fileToReadAUD, usecols=['Date', 'Time', 'Open'])
 	audusd.rename(columns={'Open':'Open AUDUSD'}, inplace=True)
