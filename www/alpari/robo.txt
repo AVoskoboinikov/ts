@@ -129,17 +129,30 @@ void modifyOrder()
       oldTp = absoluteTakeProfit;
       oldSl = absoluteStopLoss;
       
-      if(diff >= 15*inc)
+      if(diff < -0.00002) // 0.00002 because of spread
        {
-         newTp = oldTp + 10*inc;
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+         newSl = oldSl - stopLoss - 0.00002;
+         
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
        }
       
-      if(diff >= 20*inc)
-       {
-         newTp = oldTp + 10*inc;
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
-       }
+      //if(diff >= 15*inc)
+      // {
+      //   newTp = oldTp + 5*inc;
+      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+      // }
+      
+      //if(diff >= 20*inc)
+      // {
+      //   newTp = oldTp + 10*inc;
+      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+      // }
+      
+      //if(diff >= 25*inc)
+      // {
+      //   newTp = oldTp + 15*inc;
+      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+      // }
     }
  
     if(OrderType() == OP_BUY)
@@ -147,17 +160,30 @@ void modifyOrder()
       oldTp = absoluteTakeProfit;
       oldSl = absoluteStopLoss;
       
-      if(diff <= -15*inc)
+      if(diff > 0.00002)
        {
-         newTp = oldTp - 10*inc;
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+         newSl = oldSl + stopLoss + 0.00002;
+         
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
        }
       
-      if(diff <= -20*inc)
-       {
-         newTp = oldTp - 10*inc;
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
-       }
+      //if(diff <= -15*inc)
+      // {
+      //   newTp = oldTp - 5*inc;
+      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+      // }
+      
+      //if(diff <= -20*inc)
+      // {
+      //   newTp = oldTp - 10*inc;
+      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+      // }
+      
+      //if(diff <= -25*inc)
+      // {
+      //   newTp = oldTp - 15*inc;
+      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
+      // }
     }
 }
 
