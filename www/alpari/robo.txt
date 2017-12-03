@@ -118,22 +118,34 @@ void modifyOrder()
    double diff;
    double oldTp, oldSl, newTp, newSl;
    double inc = 0.00001;
+   double spread = 0.00002;
+   double cP = iOpen("AUDUSD", PERIOD_M1, 0);
    
    OrderSelect(lastTicket, SELECT_BY_TICKET);
+   diff = cP - OrderOpenPrice();
    
-   diff = iOpen("AUDUSD", PERIOD_M1, 0) - OrderOpenPrice();
-   Print("Diff: " + diff);
+   //Print(DoubleToString(cP));
       
    if(OrderType() == OP_SELL)
     {
       oldTp = absoluteTakeProfit;
       oldSl = absoluteStopLoss;
       
-      if(diff < -0.00002) // 0.00002 because of spread
+      if(diff < -spread && OrderStopLoss() == absoluteStopLoss) // spread because of spread
        {
-         newSl = oldSl - stopLoss - 0.00002;
+         newSl = oldSl - stopLoss - spread;
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, 0, 0, Blue);
+       }
+       
+      if(cP < OrderStopLoss() && OrderStopLoss() != absoluteStopLoss)
+       {
+         newSl = OrderStopLoss();
+         newSl = newSl - (OrderStopLoss() - cP)*(9.0/10.0);
          
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
+         if (newSl < OrderStopLoss())
+          {
+            modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, 0, 0, Blue);
+          }
        }
       
       //if(diff >= 15*inc)
@@ -160,13 +172,23 @@ void modifyOrder()
       oldTp = absoluteTakeProfit;
       oldSl = absoluteStopLoss;
       
-      if(diff > 0.00002)
+      if(diff > spread && OrderStopLoss() == absoluteStopLoss)
        {
-         newSl = oldSl + stopLoss + 0.00002;
-         
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
-       }
+         newSl = oldSl + stopLoss + spread;
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, 0, 0, Blue);
+       }       
       
+      if(cP > OrderStopLoss() && OrderStopLoss() != absoluteStopLoss)
+       {
+         newSl = OrderStopLoss();
+         newSl = newSl + (cP - OrderStopLoss())*(9.0/10.0); // 3/4 && 9/10
+         
+         if (newSl > OrderStopLoss())
+          {
+            modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, 0, 0, Blue);
+          }
+       }
+       
       //if(diff <= -15*inc)
       // {
       //   newTp = oldTp - 5*inc;
