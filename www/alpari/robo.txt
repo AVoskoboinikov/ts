@@ -134,7 +134,7 @@ void modifyOrder()
       if(diff < -spread && OrderStopLoss() == absoluteStopLoss) // spread because of spread
        {
          newSl = oldSl - stopLoss - spread;
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, 0, 0, Blue);
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
        }
        
       if(cP < OrderStopLoss() && OrderStopLoss() != absoluteStopLoss)
@@ -144,7 +144,7 @@ void modifyOrder()
          
          if (newSl < OrderStopLoss())
           {
-            modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, 0, 0, Blue);
+            modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
           }
        }
       
@@ -172,10 +172,12 @@ void modifyOrder()
       oldTp = absoluteTakeProfit;
       oldSl = absoluteStopLoss;
       
+      Print("Diff: " + diff);
+      
       if(diff > spread && OrderStopLoss() == absoluteStopLoss)
        {
          newSl = oldSl + stopLoss + spread;
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, 0, 0, Blue);
+         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
        }       
       
       if(cP > OrderStopLoss() && OrderStopLoss() != absoluteStopLoss)
@@ -185,7 +187,7 @@ void modifyOrder()
          
          if (newSl > OrderStopLoss())
           {
-            modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, 0, 0, Blue);
+            modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
           }
        }
        
