@@ -7,6 +7,7 @@ from advisers import adviserThreeSteps
 from advisers import adviserTrendUp
 from advisers import alwaysTrue
 from advisers import alwaysFalse
+from advisers import adviserAudNzdCommonPattern
 
 def drawPlot(index, nzdHisoryTicks, audHisoryTicks, openTick, closeTick, isPositive):
 	audNzdCoef = (audHisoryTicks[0] - nzdHisoryTicks[0])%0.001
@@ -23,7 +24,7 @@ def drawPlot(index, nzdHisoryTicks, audHisoryTicks, openTick, closeTick, isPosit
 	plt.grid()
 
 	plt.plot(x_axis, nzd_y_axis, 'g-')
-	plt.plot(x_axis, aud_y_axis, 'm-')
+	# plt.plot(x_axis, aud_y_axis, 'm-')
 	plt.axvline(openTick)
 	plt.axvline(closeTick)
 
@@ -82,15 +83,16 @@ totalProfit = 0
 totalLoss = 0
 stopLossCountFromTick = 0
 window = 450
-stopLoss = 0.0007
-# stopProfit = 0.0009
+stopLoss = 0.0015
+stopProfit = 0.0005
 totalLossBiggerThanTotalProfit = 0
 
 for tick in range(window, len(openNzdUsd)):
 	if isOrderPlaced == False:
-		history = openNzdUsd[(tick-window) : (tick+1)]
+		audTicks = openAudUsd[(tick-window+1) : (tick+1)]
+		nzdTicks = openNzdUsd[(tick-window+1) : (tick+1)]
 
-		if adviserTrendUp(history):
+		if adviserTrendUp(nzdTicks) and adviserAudNzdCommonPattern(audTicks, nzdTicks):
 			isOrderPlaced = True
 			orderPlaceValue = openNzdUsd[tick]
 			orderPlaceTick = tick
@@ -122,12 +124,26 @@ for tick in range(window, len(openNzdUsd)):
 
 			drawPlot(orderPlaceTick, nzdHistoryToDraw, audHistoryToDraw, orderOpenTick, orderCloseTick, win)
 
-		if tickDiff > 0:
-			stopLossCountFromTick = tick
+		if tickDiff >= stopProfit:
+			win = True
+			isOrderPlaced = False
+			totalDiff = openNzdUsd[tick] - openNzdUsd[orderPlaceTick]
+			totalProfit += abs(totalDiff)
+
+			startFrom = orderPlaceTick-window
+			orderOpenTick = window
+			nzdHistoryToDraw = openNzdUsd[startFrom : tick+50]
+			audHistoryToDraw = openAudUsd[startFrom : tick+50]
+			orderCloseTick = len(nzdHistoryToDraw) - 50
+
+			drawPlot(orderPlaceTick, nzdHistoryToDraw, audHistoryToDraw, orderOpenTick, orderCloseTick, win)
+
+		# if tickDiff > 0:
+		# 	stopLossCountFromTick = tick
 			
-			# isOrderPlaced = False
-			# totalProfit += abs(tickDiff)
-			# drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-2*window) : (tick + 1)], True)
+		# 	# isOrderPlaced = False
+		# 	# totalProfit += abs(tickDiff)
+		# 	# drawPlot(tick, (tick - orderPlaceTick), openAudUsd[(orderPlaceTick-2*window) : (tick + 1)], True)
 
 print('Total profit:', totalProfit)
 print('Total loss:', totalLoss)

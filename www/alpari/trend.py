@@ -53,6 +53,21 @@ def isTrendMovingUp(ticks, window):
 
 	return series == sorted(series)
 
+def isTrendMovingUp2(ticks):
+	sumUp = 0
+	sumDown = 0
+
+	for i in range(1, len(ticks)):
+		diff = ticks[i] - ticks[i-1]
+		
+		if diff > 0:
+			sumUp += diff
+
+		if diff < 0:
+			sumDown += abs(diff)
+
+	return sumUp > sumDown
+
 def isTrendMovingDown(ticks, window):
 	series = []
 
@@ -65,6 +80,21 @@ def isTrendMovingDown(ticks, window):
 	series.append(ticks[-1])
 
 	return series == sorted(series, reverse=True)
+
+def isTrendMovingDown2(ticks):
+	sumUp = 0
+	sumDown = 0
+
+	for i in range(1, len(ticks)):
+		diff = ticks[i] - ticks[i-1]
+		
+		if diff > 0:
+			sumUp += diff
+
+		if diff < 0:
+			sumDown += abs(diff)
+
+	return sumDown > sumUp
 
 # audusdFile = 'NZDUSD1M - last year.csv'
 # audusd = pd.read_csv(audusdFile, usecols=['Date', 'Time', 'Open'])

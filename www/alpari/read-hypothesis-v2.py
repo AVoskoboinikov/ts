@@ -8,11 +8,18 @@ from trend import trendEMA, isTrendMovingUp, isTrendMovingDown
 from volatility import getVolatility, getUpVolatility, getDownVolatility
 from helpers import getTrendGraphPierceIndex, getTrendGraphPierceWeightedIndex, getTrendGraphUnPierceWeightedIndex, linesNotCross
 
-from advisers import adviserTrendUp
+from advisers import adviserTrendUp, adviserAudNzdCommonPattern
 
 windowToCheck = 450
 afterLag = 200
 
+def getCorr(audusd, nzdusd):
+	corr = 0
+
+	df = pd.DataFrame.from_items([('audusd', audusd), ('nzdusd', nzdusd)])
+	corr = df.corr()
+
+	return corr
 
 def isPositiveFixture(ticks):
 	isOk = False
@@ -55,6 +62,12 @@ def addAdditionalInfoToPlot(info):
 	plt.figtext(0.175, 0.95, "mVolatility3: " + str(format(info['volatility-3-max'], 'f')), color="black", weight=500, size="medium")
 	plt.figtext(0.175, 0.925, "countMV: " + str(len(info['volatility-3-series'])), color="black", weight=500, size="medium")
 
+	# plt.figtext(0.325, 0.975, "Gen Corr: " + str(format(info['genCorr'], 'f')), color="black", weight=500, size="medium")
+	# plt.figtext(0.325, 0.95, "Short Corr: " + str(format(info['shortCorr'], 'f')), color="black", weight=500, size="medium")
+	# plt.figtext(0.325, 0.925, "Prev Corr: " + str(format(info['prevCorr'], 'f')), color="black", weight=500, size="medium")
+	# plt.figtext(0.325, 0.9, "Last Corr: " + str(format(info['lastCorr'], 'f')), color="black", weight=500, size="medium")
+
+	# plt.figtext(0.425, 0.975, "Pierced: " + str(format(info['piercedIndex'], 'f')), color="black", weight=500, size="medium")
 
 def drawPlot(plotTitle, ticksToDraw, additionalData):
 	y_axis = [float(tick) for tick in ticksToDraw]
@@ -105,6 +118,8 @@ def getAdditionalData(ticks):
 	volatility1, volatility1Max, volatility1Series = getVolatility(trendTicks, 1)
 	volatility3, volatility3Max, volatility3Series = getVolatility(trendTicks, 3)
 
+	piercedIndex = getTrendGraphPierceIndex(emaSubTrend[-20 : ], emaMiniTrend)
+
 	return {
 		'mini-trend': {'trend': emaMiniTrend, 'x': range(windowToCheck - len(emaMiniTrend) + 1, windowToCheck + 1)},
 		'sub-trend': {'trend': emaSubTrend, 'x': range(windowToCheck - len(subTrendTicks) + 1, windowToCheck + 1)},
@@ -116,6 +131,7 @@ def getAdditionalData(ticks):
 		'volatility-3': round(volatility3, 5),
 		'volatility-3-max': round(volatility3Max, 5),
 		'volatility-3-series': volatility3Series,
+		'piercedIndex': piercedIndex
 	}
 
 def checkIfStartToFall(ticks):
@@ -129,11 +145,11 @@ def checkIfStartToFall(ticks):
 	return False
 
 def getAudAndNzdTicks():
-	# fileToReadAUD = 'AUDUSD1M - last year.csv'
-	fileToRead = 'AUDUSD1M.csv'
+	fileToReadAUD = 'AUDUSD1M - last year.csv'
+	# fileToReadAUD = 'AUDUSD1M.csv'
 	
-	# fileToReadNZD = 'NZDUSD1M - last year.csv'
-	fileToRead = 'NZDUSD1M.csv'
+	fileToReadNZD = 'NZDUSD1M - last year.csv'
+	# fileToReadNZD = 'NZDUSD1M.csv'
 
 	audusd = pd.read_csv(fileToReadAUD, usecols=['Date', 'Time', 'Open'])
 	audusd.rename(columns={'Open':'Open AUDUSD'}, inplace=True)
@@ -171,84 +187,129 @@ for tick in range(windowToCheck, len(openNzdUsd), ticksStep):
 	sampleAudUsdTicks = openAudUsd[tick-windowToCheck+1 : tick+1]
 	sampleNzdUsdTicks = openNzdUsd[tick-windowToCheck+1 : tick+1]
 
-	isNzdOk = adviserTrendUp(sampleNzdUsdTicks)
-	# isAudOk = adviserTrendUp(sampleAudUsdTicks)
+	totalCor = getCorr(sampleAudUsdTicks[-150 : ], sampleNzdUsdTicks[-150 : ])
 
-	isOk = isNzdOk
-	
+	isOk = False
+
+	if totalCor['audusd']['nzdusd'] < -0.5:
+		isOk = True
+
 	if isOk:
 		skipTicks = 30
 
 		audData = getAdditionalData(sampleAudUsdTicks)
 		nzdData = getAdditionalData(sampleNzdUsdTicks)
 
-		# if isOk:
-		# 	# must be used
-		# 	nzdFPoint = nzdData['total-trend']['trend'][0]
-		# 	nzdLPoint = nzdData['total-trend']['trend'][-1]
+	######################### This OK #########################
+	# isNzdOk = adviserTrendUp(sampleNzdUsdTicks)
+	# isAudOk = adviserTrendUp(sampleAudUsdTicks)
 
-		# 	audFPoint = audData['total-trend']['trend'][0]
-		# 	audLPoint = audData['total-trend']['trend'][-1]
+	# isOk = isNzdOk and adviserAudNzdCommonPattern(sampleAudUsdTicks, sampleNzdUsdTicks)
+	
+	# if isOk:
+	# 	skipTicks = 30
+
+	# 	audData = getAdditionalData(sampleAudUsdTicks)
+	# 	nzdData = getAdditionalData(sampleNzdUsdTicks)
+
+	# 	genCorr = getCorr(sampleAudUsdTicks, sampleNzdUsdTicks)
+	# 	genCorr = genCorr['audusd']['nzdusd']
+
+	# 	shortCorr = getCorr(sampleAudUsdTicks[-150 : ], sampleNzdUsdTicks[-150 : ])
+	# 	shortCorr = shortCorr['audusd']['nzdusd']
+
+	# 	prevCorr = getCorr(sampleAudUsdTicks[-450 : -150], sampleNzdUsdTicks[-450 : -150])
+	# 	prevCorr = prevCorr['audusd']['nzdusd']
+
+	# 	lastCorr = getCorr(sampleAudUsdTicks[-20 : ], sampleNzdUsdTicks[-20 : ])
+	# 	lastCorr = lastCorr['audusd']['nzdusd']
+
+	# 	audData['genCorr'] = genCorr
+	# 	audData['shortCorr'] = shortCorr
+	# 	audData['prevCorr'] = prevCorr
+	# 	audData['lastCorr'] = lastCorr
+
+	# 	nzdData['genCorr'] = genCorr
+	# 	nzdData['shortCorr'] = shortCorr
+	# 	nzdData['prevCorr'] = prevCorr
+	# 	nzdData['lastCorr'] = lastCorr
+
+	# 	isOk = False
+	# 	if genCorr > 0.8:
+	# 		isOk = True
+
+		# isOk = False
+		# if audData['piercedIndex'] >= 0.002 or nzdData['piercedIndex'] >= 0.002:
+			# isOk = True
+	######################### END #########################
+
+		# if isOk:
+	# 	# 	# must be used
+	# 	# 	nzdFPoint = nzdData['total-trend']['trend'][0]
+	# 	# 	nzdLPoint = nzdData['total-trend']['trend'][-1]
+
+	# 	# 	audFPoint = audData['total-trend']['trend'][0]
+	# 	# 	audLPoint = audData['total-trend']['trend'][-1]
 			
-		# 	if ((nzdFPoint > nzdLPoint) and abs(nzdFPoint-nzdLPoint) >= 0.0005) and ((audFPoint > audLPoint) and abs(audFPoint-audLPoint) >= 0.0005):
-		# 		audLPoint1 = audData['total-trend']['trend'][-1]
-		# 		audLPoint2 = audData['main-trend']['trend'][-1]
+	# 	# 	if ((nzdFPoint > nzdLPoint) and abs(nzdFPoint-nzdLPoint) >= 0.0005) and ((audFPoint > audLPoint) and abs(audFPoint-audLPoint) >= 0.0005):
+	# 	# 		audLPoint1 = audData['total-trend']['trend'][-1]
+	# 	# 		audLPoint2 = audData['main-trend']['trend'][-1]
 
-		# 		nzdLPoint1 = nzdData['total-trend']['trend'][-1]
-		# 		nzdLPoint2 = nzdData['main-trend']['trend'][-1]
+	# 	# 		nzdLPoint1 = nzdData['total-trend']['trend'][-1]
+	# 	# 		nzdLPoint2 = nzdData['main-trend']['trend'][-1]
 
-		# 		if audLPoint1 > audLPoint2 and nzdLPoint1 > nzdLPoint2:
-		# 			isOk = False
+	# 	# 		if audLPoint1 > audLPoint2 and nzdLPoint1 > nzdLPoint2:
+	# 	# 			isOk = False
 
-		# if isOk:
-		# 	if checkIfStartToFall(sampleAudUsdTicks) or checkIfStartToFall(sampleNzdUsdTicks):
-		# 		isOk = False
+	# 	# if isOk:
+	# 	# 	if checkIfStartToFall(sampleAudUsdTicks) or checkIfStartToFall(sampleNzdUsdTicks):
+	# 	# 		isOk = False
 		
-		if isOk:
-			isOk = False
+	# 	if isOk:
+	# 		isOk = False
 
-			audLPoint = audData['total-trend']['trend'][-1]
-			audFPoint1 = audData['main-trend']['trend'][0]
-			audLPoint1 = audData['main-trend']['trend'][-1]
-			audFPoint2 = audData['sub-trend']['trend'][0]
-			audLPoint2 = audData['sub-trend']['trend'][-1]
+	# 		audLPoint = audData['total-trend']['trend'][-1]
+	# 		audFPoint1 = audData['main-trend']['trend'][0]
+	# 		audLPoint1 = audData['main-trend']['trend'][-1]
+	# 		audFPoint2 = audData['sub-trend']['trend'][0]
+	# 		audLPoint2 = audData['sub-trend']['trend'][-1]
 
-			nzdLPoint = nzdData['total-trend']['trend'][-1]
-			nzdFPoint1 = nzdData['main-trend']['trend'][0]
-			nzdLPoint1 = nzdData['main-trend']['trend'][-1]
-			nzdFPoint2 = nzdData['sub-trend']['trend'][0]
-			nzdLPoint2 = nzdData['sub-trend']['trend'][-1]
+	# 		nzdLPoint = nzdData['total-trend']['trend'][-1]
+	# 		nzdFPoint1 = nzdData['main-trend']['trend'][0]
+	# 		nzdLPoint1 = nzdData['main-trend']['trend'][-1]
+	# 		nzdFPoint2 = nzdData['sub-trend']['trend'][0]
+	# 		nzdLPoint2 = nzdData['sub-trend']['trend'][-1]
 
 
-			# перевірка, що між графіками ауд і нсд зберігаєтсья картинка того, як розташовані тренди
+	# 		# перевірка, що між графіками ауд і нсд зберігаєтсья картинка того, як розташовані тренди
 
-			# перші точки головного і суб тренда менші за останню точку повного тренда
-			# останні точки головного і суб тренда більші за останню точку повного тренда
-			# if audLPoint > audFPoint1 and audLPoint > audFPoint2 and audLPoint < audLPoint1 and audLPoint < audLPoint2:
-			# 	if nzdLPoint > nzdFPoint1 and nzdLPoint > nzdFPoint2 and nzdLPoint < nzdLPoint1 and nzdLPoint < nzdLPoint2:
-			# 		isOk = True
+	# 		# перші точки головного і суб тренда менші за останню точку повного тренда
+	# 		# останні точки головного і суб тренда більші за останню точку повного тренда
+	# 		# if audLPoint > audFPoint1 and audLPoint > audFPoint2 and audLPoint < audLPoint1 and audLPoint < audLPoint2:
+	# 		# 	if nzdLPoint > nzdFPoint1 and nzdLPoint > nzdFPoint2 and nzdLPoint < nzdLPoint1 and nzdLPoint < nzdLPoint2:
+	# 		# 		isOk = True
 
-			# перша точка головного тренда менша за останню точку повного тренда
-			# перша точка суб тренда більша за останню точку повного тренда
-			# останні точки головного і суб тренда більші за останню точку повного тренда
-			if audLPoint > audFPoint1 and audLPoint < audFPoint2 and audLPoint < audLPoint1 and audLPoint < audLPoint2:
-				if nzdLPoint > nzdFPoint1 and nzdLPoint < nzdFPoint2 and nzdLPoint < nzdLPoint1 and nzdLPoint < nzdLPoint2:
-					isOk = True
+	# 		# перша точка головного тренда менша за останню точку повного тренда
+	# 		# перша точка суб тренда більша за останню точку повного тренда
+	# 		# останні точки головного і суб тренда більші за останню точку повного тренда
+	# 		if audLPoint > audFPoint1 and audLPoint < audFPoint2 and audLPoint < audLPoint1 and audLPoint < audLPoint2:
+	# 			if nzdLPoint > nzdFPoint1 and nzdLPoint < nzdFPoint2 and nzdLPoint < nzdLPoint1 and nzdLPoint < nzdLPoint2:
+	# 				isOk = True
 
-			if isOk:
-				if not linesNotCross(audData['sub-trend']['trend'], audData['main-trend']['trend'][-75:]):
-					isOk = False
+	# 		if isOk:
+	# 			if not linesNotCross(audData['sub-trend']['trend'], audData['main-trend']['trend'][-75:]):
+	# 				isOk = False
 
-				if not linesNotCross(nzdData['sub-trend']['trend'], nzdData['main-trend']['trend'][-75:]):
-					isOk = False
+	# 			if not linesNotCross(nzdData['sub-trend']['trend'], nzdData['main-trend']['trend'][-75:]):
+	# 				isOk = False
 
-		if isOk:
-			volatilityLimit = 0.001
-			if audData['volatility-1-max'] >= volatilityLimit or nzdData['volatility-1-max'] >= volatilityLimit:
-				isOk = False
+	# 	if isOk:
+	# 		volatilityLimit = 0.001
+	# 		if audData['volatility-1-max'] >= volatilityLimit or nzdData['volatility-1-max'] >= volatilityLimit:
+	# 			isOk = False
 
-			if audData['volatility-3-max'] >= volatilityLimit or nzdData['volatility-3-max'] >= volatilityLimit:
-				isOk = False
+	# 		if audData['volatility-3-max'] >= volatilityLimit or nzdData['volatility-3-max'] >= volatilityLimit:
+	# 			isOk = False
 	
 
 		# if isOk:
