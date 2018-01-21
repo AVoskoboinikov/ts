@@ -6,8 +6,8 @@
 
 //input int period = 3;
 
-//input double bP = 0.0010;
-//input double bQ = 0.0020;
+//input double upperInc = 0.00005;
+//input double bottomInc = 0.00005;
 
 //input double sP = 0.0010;
 //input double sQ = 0.0020;
@@ -16,11 +16,15 @@
 
 datetime currentBarStartTime;
 int lastTicket;
-double takeProfit = 0.0002;
+double takeProfit = 0.001;
 double stopLoss = 0.0003;
 bool modified = false;
 
 double absoluteTakeProfit, absoluteStopLoss;
+int breakDown = 0;
+
+double spread = 0.00000;
+double realSpread = 0.00002;
 
 //--------------------------------------------------------------------
 
@@ -39,6 +43,7 @@ int start()
          if(timeDiff > 10)
           {
             openOrder();
+            breakDown = 0;
           }
        }
        
@@ -69,8 +74,8 @@ void openOrder()
    // Sell
    if(response == "-1")
     {
-      stoploss=NormalizeDouble(Ask+stopLoss+minstoplevel*Point,Digits);
-      takeprofit=NormalizeDouble(Bid-takeProfit-minstoplevel*Point,Digits);
+      stoploss=NormalizeDouble(Ask+stopLoss+minstoplevel*Point,Digits) + spread;
+      takeprofit=NormalizeDouble(Bid-takeProfit-minstoplevel*Point,Digits) + spread;
    
       lastTicket = OrderSend("AUDUSD", OP_SELL, lotSize, Bid, 0, stoploss, takeprofit);
     }
@@ -78,8 +83,8 @@ void openOrder()
    // Buy
    if(response == "1")
     {
-      stoploss=NormalizeDouble(Bid-stopLoss-minstoplevel*Point,Digits);
-      takeprofit=NormalizeDouble(Ask+takeProfit+minstoplevel*Point,Digits);
+      stoploss=NormalizeDouble(Bid-stopLoss-minstoplevel*Point,Digits) - spread;
+      takeprofit=NormalizeDouble(Ask+takeProfit+minstoplevel*Point,Digits) - spread;
       
       lastTicket = OrderSend("AUDUSD", OP_BUY, lotSize, Ask, 0, stoploss, takeprofit);
     }
@@ -90,7 +95,7 @@ void openOrder()
     
    if(lastTicket < 0)
     {
-     Print("OrderSend çàâåðøèëàñü ñ îøèáêîé #",GetLastError());
+     Print("OrderSend Ð·Ð°Ð²ÐµÑ€ÑˆÐ¸Ð»Ð°ÑÑŒ Ñ Ð¾ÑˆÐ¸Ð±ÐºÐ¾Ð¹ #",GetLastError());
     }
 }
 
@@ -118,96 +123,126 @@ void modifyOrder()
    double diff;
    double oldTp, oldSl, newTp, newSl;
    double inc = 0.00001;
-   double spread = 0.00002;
+   double profitBoundInc = 0.00015, lossBoundInc = 0.00025;
+   //double profitBoundInc = upperInc, lossBoundInc = bottomInc;
+   double lowerBound, upperBound;
+   double lossBound, profitBound;
    double cP = iOpen("AUDUSD", PERIOD_M1, 0);
    
    OrderSelect(lastTicket, SELECT_BY_TICKET);
-   diff = cP - OrderOpenPrice();
    
-   //Print(DoubleToString(cP));
-      
+   // set safe window for sell ops
    if(OrderType() == OP_SELL)
+    {
+      lowerBound = OrderOpenPrice() - profitBoundInc + spread; 
+      upperBound = OrderOpenPrice() + lossBoundInc + spread;
+      
+      profitBound = lowerBound;
+      lossBound = upperBound;
+    }
+   
+   // set safe window for buy ops 
+   if(OrderType() == OP_BUY)
+    {
+      upperBound = OrderOpenPrice() + profitBoundInc - spread; 
+      lowerBound = OrderOpenPrice() - lossBoundInc - spread;
+      
+      profitBound = upperBound;
+      lossBound = lowerBound;
+    }
+   
+   // if we are inside safe window - do nothing
+   if(cP >= lowerBound && cP <= upperBound && breakDown == 0)
+    {
+      return;
+    }
+   
+   if(breakDown == 0)
+    {
+      if(((OrderType() == OP_SELL && cP >= lossBound) || (OrderType() == OP_SELL && cP <= profitBound)))
+       {
+         breakDown = 1;
+       }
+      
+      if(((OrderType() == OP_BUY && cP >= profitBound) || (OrderType() == OP_BUY && cP <= lossBound)))
+       {
+         breakDown = 1;
+       }
+    }
+  
+   diff = cP - OrderOpenPrice();
+      
+   if(OrderType() == OP_SELL && breakDown == 1)
     {
       oldTp = absoluteTakeProfit;
       oldSl = absoluteStopLoss;
       
-      if(diff < -spread && OrderStopLoss() == absoluteStopLoss) // spread because of spread
+      //if(diff < -spread && OrderStopLoss() == absoluteStopLoss) // spread because of spread
+      // {
+      //   newSl = oldSl - stopLoss - spread;
+      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
+      // }
+      
+      if(cP >= lossBound)
        {
-         newSl = oldSl - stopLoss - spread;
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
+         //modified = OrderModify(OrderTicket(), OrderOpenPrice(), OrderStopLoss(), OrderOpenPrice(), 0, Blue);
+         //return;
+       }
+      
+      if(cP <= profitBound)
+       {
+         //modified = OrderModify(OrderTicket(), OrderOpenPrice(), OrderOpenPrice(), OrderTakeProfit(), 0, Blue);
+         //return;
        }
        
-      if(cP < OrderStopLoss() && OrderStopLoss() != absoluteStopLoss)
+      if(cP < OrderStopLoss())
        {
          newSl = OrderStopLoss();
          newSl = newSl - (OrderStopLoss() - cP)*(9.0/10.0);
          
-         if (newSl < OrderStopLoss())
+         // diff between cP and newSl must be greater than realSpread
+         if (newSl < OrderStopLoss() && MathAbs(newSl - cP) >= realSpread)
           {
-            modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
+            //Print("cp:" + NormalizeDouble(cP, Digits) + " newSl:" + NormalizeDouble(newSl, Digits) + " newTp:" + oldTp);
+            modified = OrderModify(OrderTicket(), OrderOpenPrice(), NormalizeDouble(newSl, Digits) , oldTp, 0, Blue);
           }
        }
-      
-      //if(diff >= 15*inc)
-      // {
-      //   newTp = oldTp + 5*inc;
-      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
-      // }
-      
-      //if(diff >= 20*inc)
-      // {
-      //   newTp = oldTp + 10*inc;
-      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
-      // }
-      
-      //if(diff >= 25*inc)
-      // {
-      //   newTp = oldTp + 15*inc;
-      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
-      // }
     }
  
-    if(OrderType() == OP_BUY)
+    if(OrderType() == OP_BUY && breakDown == 1)
     {
       oldTp = absoluteTakeProfit;
       oldSl = absoluteStopLoss;
       
-      Print("Diff: " + diff);
+      //if(diff > spread && OrderStopLoss() == absoluteStopLoss)
+      // {
+      //   newSl = oldSl + stopLoss + spread;
+      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
+      // }  
       
-      if(diff > spread && OrderStopLoss() == absoluteStopLoss)
+      if(cP <= lossBound)
        {
-         newSl = oldSl + stopLoss + spread;
-         modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
-       }       
+         //modified = OrderModify(OrderTicket(), OrderOpenPrice(), OrderStopLoss(), OrderOpenPrice(), 0, Blue);
+         //return;
+       }     
       
-      if(cP > OrderStopLoss() && OrderStopLoss() != absoluteStopLoss)
+      if(cP >= profitBound)
+       {
+         //modified = OrderModify(OrderTicket(), OrderOpenPrice(), OrderOpenPrice(), OrderTakeProfit(), 0, Blue);
+         //return;
+       }
+      
+      if(cP > OrderStopLoss())
        {
          newSl = OrderStopLoss();
          newSl = newSl + (cP - OrderStopLoss())*(9.0/10.0); // 3/4 && 9/10
          
          if (newSl > OrderStopLoss())
           {
+            //Print("cp:" + NormalizeDouble(cP, Digits) + " newSl:" + NormalizeDouble(newSl, Digits) + " newTp:" + oldTp);
             modified = OrderModify(OrderTicket(), OrderOpenPrice(), newSl, oldTp, 0, Blue);
           }
        }
-       
-      //if(diff <= -15*inc)
-      // {
-      //   newTp = oldTp - 5*inc;
-      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
-      // }
-      
-      //if(diff <= -20*inc)
-      // {
-      //   newTp = oldTp - 10*inc;
-      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
-      // }
-      
-      //if(diff <= -25*inc)
-      // {
-      //   newTp = oldTp - 15*inc;
-      //   modified = OrderModify(OrderTicket(), OrderOpenPrice(), oldSl, newTp, 0, Blue);
-      // }
     }
 }
 
@@ -227,7 +262,7 @@ string makeRequest()
    eurNzd = "\"" + iOpen("EURNZD", PERIOD_M1, 0) + "\"";
       
    int i;
-   for(i=1;i<30;i++)
+   for(i=1;i<45;i++)
     {
      audUsd = audUsd + "," + "\"" + iOpen("AUDUSD", PERIOD_M1, i) + "\"";
      nzdUsd = nzdUsd + "," + "\"" + iOpen("NZDUSD", PERIOD_M1, i) + "\"";
@@ -251,9 +286,9 @@ string makeRequest()
    
    if(responseCode==-1)
      {
-      Print("Îøèáêà â WebRequest. Êîä îøèáêè  =",GetLastError());
-      //--- âîçìîæíî, URL îòñóòñòâóåò â ñïèñêå, âûâîäèì ñîîáùåíèå î íåîáõîäèìîñòè åãî äîáàâëåíèÿ
-      Print("Íåîáõîäèìî äîáàâèòü àäðåñ '"+url+"' â ñïèñîê ðàçðåøåííûõ URL âî âêëàäêå 'Ñîâåòíèêè'");
+      Print("ÐžÑˆÐ¸Ð±ÐºÐ° Ð² WebRequest. ÐšÐ¾Ð´ Ð¾ÑˆÐ¸Ð±ÐºÐ¸  =",GetLastError());
+      //--- Ð²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾, URL Ð¾Ñ‚ÑÑƒÑ‚ÑÑ‚Ð²ÑƒÐµÑ‚ Ð² ÑÐ¿Ð¸ÑÐºÐµ, Ð²Ñ‹Ð²Ð¾Ð´Ð¸Ð¼ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ Ð¾ Ð½ÐµÐ¾Ð±Ñ…Ð¾Ð´Ð¸Ð¼Ð¾ÑÑ‚Ð¸ ÐµÐ³Ð¾ Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð¸Ñ
+      Print("ÐÐµÐ¾Ð±Ñ…Ð¾Ð´Ð¸Ð¼Ð¾ Ð´Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð°Ð´Ñ€ÐµÑ '"+url+"' Ð² ÑÐ¿Ð¸ÑÐ¾Ðº Ñ€Ð°Ð·Ñ€ÐµÑˆÐµÐ½Ð½Ñ‹Ñ… URL Ð²Ð¾ Ð²ÐºÐ»Ð°Ð´ÐºÐµ 'Ð¡Ð¾Ð²ÐµÑ‚Ð½Ð¸ÐºÐ¸'");
       
       return NULL;
      }
